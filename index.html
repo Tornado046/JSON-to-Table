@@ -2,84 +2,60 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>JSON a Tabla Automática</title>
+<title>JSON a Tabla</title>
 <style>
-body { font-family: Arial, sans-serif; margin: 20px; }
-table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-th, td { border: 1px solid #ccc; padding: 5px; text-align: left; }
-th { background-color: #f0f0f0; }
-button { margin-top: 10px; padding: 5px 10px; }
+body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+textarea { width: 100%; height: 200px; }
+table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+th, td { border: 1px solid #aaa; padding: 5px; text-align: left; }
+th { background: #ddd; }
 </style>
 </head>
 <body>
-
-<h2>Tabla generada desde JSON</h2>
-<button onclick="downloadCSV()">Descargar CSV</button>
-<div id="tableContainer"></div>
+<h1>JSON a Tabla</h1>
+<textarea id="jsonInput" placeholder="Pega tu JSON aquí"></textarea>
+<button onclick="generarTabla()">Generar Tabla</button>
+<div id="tablaContainer"></div>
 
 <script>
-// JSON de ejemplo, reemplázalo con tu JSON
-const data = {
-  "result": true,
-  "items": [
-    { "_id": "1", "code": 10101001, "amount": 20005, "level": 0 },
-    { "_id": "2", "code": 10101002, "amount": 1657, "level": 0 }
-  ]
-};
+function generarTabla() {
+    let container = document.getElementById('tablaContainer');
+    container.innerHTML = '';
+    let jsonText = document.getElementById('jsonInput').value;
+    let jsonData;
+    try {
+        jsonData = JSON.parse(jsonText);
+    } catch (e) {
+        container.innerHTML = '<p style="color:red">JSON no válido</p>';
+        return;
+    }
 
-// Función para “aplanar” JSON
-function flattenJSON(obj, prefix = '', res = {}) {
-    if (Array.isArray(obj)) {
-        obj.forEach((item, i) => flattenJSON(item, `${prefix}${i}.`, res));
-    } else if (typeof obj === 'object' && obj !== null) {
-        for (let key in obj) {
-            flattenJSON(obj[key], prefix ? `${prefix}${key}.` : key + '.', res);
+    function recorrer(obj, table) {
+        if (Array.isArray(obj)) {
+            obj.forEach(item => recorrer(item, table));
+        } else if (typeof obj === 'object' && obj !== null) {
+            let row = table.insertRow();
+            Object.keys(obj).forEach(key => {
+                if (!table.headersAdded) {
+                    let th = document.createElement('th');
+                    th.textContent = key;
+                    table.tHead.appendChild(th);
+                }
+                let cell = row.insertCell();
+                let val = obj[key];
+                if (typeof val === 'object') val = JSON.stringify(val);
+                cell.textContent = val;
+            });
+            table.headersAdded = true;
         }
-    } else {
-        res[prefix.slice(0, -1)] = obj;
-    }
-    return res;
-}
-
-// Generar tabla
-function generateTable(json) {
-    let rows = [];
-    if (Array.isArray(json)) {
-        rows = json.map(item => flattenJSON(item));
-    } else if (json.items) {
-        rows = json.items.map(item => flattenJSON(item));
-    } else {
-        rows = [flattenJSON(json)];
     }
 
-    let allKeys = Array.from(new Set(rows.flatMap(r => Object.keys(r))));
-    let html = '<table><tr>' + allKeys.map(k => `<th>${k}</th>`).join('') + '</tr>';
-    rows.forEach(r => {
-        html += '<tr>' + allKeys.map(k => `<td>${r[k] !== undefined ? r[k] : ''}</td>`).join('') + '</tr>';
-    });
-    html += '</table>';
-    document.getElementById('tableContainer').innerHTML = html;
-    window._currentCSVRows = { keys: allKeys, rows: rows };
+    let table = document.createElement('table');
+    table.tHead = document.createElement('tr');
+    table.appendChild(table.tHead);
+    recorrer(jsonData, table);
+    container.appendChild(table);
 }
-
-// Descargar CSV
-function downloadCSV() {
-    if (!window._currentCSVRows) return;
-    const { keys, rows } = window._currentCSVRows;
-    let csv = keys.join(',') + '\n';
-    rows.forEach(r => {
-        csv += keys.map(k => `"${r[k] !== undefined ? r[k] : ''}"`).join(',') + '\n';
-    });
-    const blob = new Blob([csv], {type: 'text/csv'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'data.csv';
-    a.click();
-}
-
-// Al cargar la página
-generateTable(data);
 </script>
-
 </body>
 </html>
