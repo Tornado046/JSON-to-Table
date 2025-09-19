@@ -1,21 +1,162 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>JSON a Tabla</title>
-    <style>
-        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-        th { background-color: #f4f4f4; }
-        tr:hover { background-color: #eef; }
-    </style>
+<meta charset="UTF-8">
+<title>JSON a Tabla Inteligente con Buscador</title>
+<style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    textarea { width: 100%; height: 150px; font-family: monospace; font-size: 14px; }
+    button { margin: 5px 5px 5px 0; padding: 5px 10px; cursor: pointer; }
+    input[type="text"] { padding: 5px; margin: 5px; width: 200px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; table-layout: fixed; word-wrap: break-word; }
+    th, td { border: 1px solid #ccc; padding: 5px; text-align: left; vertical-align: top; }
+    th { background-color: #f4f4f4; }
+    tr:hover { background-color: #eef; }
+    #tablaContainer { max-height: 500px; overflow: auto; }
+</style>
 </head>
 <body>
-    <h1>Convertidor de JSON a Tabla</h1>
-    <textarea id="jsonInput" rows="10" style="width:100%;" placeholder="Pega tu JSON aquí"></textarea>
-    <button onclick="generarTabla()">Generar Tabla</button>
-    <div id="tablaContainer"></div>
 
-    <script src="script.js"></script>
+<h1>Convertidor de JSON a Tabla con Buscador</h1>
+<textarea id="jsonInput" placeholder="Pega tu JSON aquí"></textarea><br>
+<button onclick="generarTabla()">Generar Tabla</button>
+<button onclick="limpiarTexto()">Limpiar JSON</button>
+<button onclick="seleccionarTabla()">Seleccionar Tabla</button>
+
+<h3>Búsqueda Global:</h3>
+<input type="text" id="busquedaGlobal" oninput="buscarGlobal()" placeholder="Buscar en toda la tabla">
+
+<h3>Búsqueda por Columna:</h3>
+<select id="columnaSelect"></select>
+<input type="text" id="busquedaColumna" oninput="buscarPorColumna()" placeholder="Buscar en columna seleccionada">
+
+<div id="tablaContainer"></div>
+
+<script>
+let tablaGenerada;
+
+function generarTabla() {
+    const input = document.getElementById("jsonInput").value;
+    let data;
+
+    try {
+        data = JSON.parse(input);
+    } catch(e) {
+        alert("JSON inválido");
+        return;
+    }
+
+    const container = document.getElementById("tablaContainer");
+    container.innerHTML = "";
+
+    function render(data) {
+        if (Array.isArray(data)) {
+            return crearTabla(data);
+        } else if (typeof data === "object" && data !== null) {
+            const arrays = Object.values(data).filter(v => Array.isArray(v));
+            if (arrays.length > 0) {
+                const div = document.createElement("div");
+                arrays.forEach(arr => div.appendChild(render(arr)));
+                return div;
+            } else {
+                return crearTabla([data]);
+            }
+        } else {
+            return document.createTextNode(data);
+        }
+    }
+
+    function crearTabla(array) {
+        const table = document.createElement("table");
+        tablaGenerada = table; // Guardamos para búsqueda
+
+        const thead = document.createElement("thead");
+        const tbody = document.createElement("tbody");
+
+        const keys = Array.from(new Set(array.flatMap(obj => typeof obj === 'object' && obj !== null ? Object.keys(obj) : [])));
+
+        if (keys.length === 0) return document.createTextNode(JSON.stringify(array));
+
+        const trHead = document.createElement("tr");
+        keys.forEach(key => {
+            const th = document.createElement("th");
+            th.textContent = key;
+            trHead.appendChild(th);
+        });
+        thead.appendChild(trHead);
+
+        array.forEach(obj => {
+            const tr = document.createElement("tr");
+            keys.forEach(key => {
+                const td = document.createElement("td");
+                if (typeof obj[key] === "object" && obj[key] !== null) {
+                    td.appendChild(render(obj[key]));
+                } else {
+                    td.textContent = obj[key] !== undefined ? obj[key] : "";
+                }
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        });
+
+        table.appendChild(thead);
+        table.appendChild(tbody);
+
+        // Llenar select de columnas
+        const columnaSelect = document.getElementById("columnaSelect");
+        columnaSelect.innerHTML = "";
+        keys.forEach((key, idx) => {
+            const option = document.createElement("option");
+            option.value = idx;
+            option.textContent = key;
+            columnaSelect.appendChild(option);
+        });
+
+        return table;
+    }
+
+    container.appendChild(render(data));
+}
+
+function limpiarTexto() {
+    document.getElementById("jsonInput").value = "";
+    document.getElementById("tablaContainer").innerHTML = "";
+    document.getElementById("busquedaGlobal").value = "";
+    document.getElementById("busquedaColumna").value = "";
+}
+
+function seleccionarTabla() {
+    const container = document.getElementById("tablaContainer");
+    if (container.innerHTML === "") {
+        alert("No hay tabla generada para seleccionar.");
+        return;
+    }
+    const range = document.createRange();
+    range.selectNode(container);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+}
+
+function buscarGlobal() {
+    const term = document.getElementById("busquedaGlobal").value.toLowerCase();
+    if (!tablaGenerada) return;
+    Array.from(tablaGenerada.tBodies[0].rows).forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(term) ? "" : "none";
+    });
+}
+
+function buscarPorColumna() {
+    const term = document.getElementById("busquedaColumna").value.toLowerCase();
+    const colIdx = document.getElementById("columnaSelect").value;
+    if (!tablaGenerada) return;
+    Array.from(tablaGenerada.tBodies[0].rows).forEach(row => {
+        const cell = row.cells[colIdx];
+        row.style.display = cell && cell.textContent.toLowerCase().includes(term) ? "" : "none";
+    });
+}
+</script>
+
 </body>
 </html>
