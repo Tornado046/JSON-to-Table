@@ -73,9 +73,35 @@ body.dark #configPanel{
 #configPanel label{font-size:12px; margin-right:5px;}
 #configPanel button{font-size:12px; padding:2px 6px;}
 #configPanel input[type=checkbox]{transform:scale(1.1); margin-left:5px;}
+
+/* ---------- Filtro Global y Botón Editar ---------- */
+.globalFilterContainer {
+  margin: 5px 10px;
+  gap: 4px; /* separación opcional entre elementos */
+  display: inline-block; /* para que el contenedor solo ocupe el espacio necesario */
+}
+.globalFilter { 
+  width: 200px; /* ancho fijo, cambia según prefieras */
+  padding: 4px 8px; 
+  font-size: 12px; 
+  box-sizing: border-box; 
+}
+.globalClearBtn {
+  cursor: pointer; 
+  font-size: 12px; 
+  color: red; 
+  user-select: none; 
+  display: inline-block;
+  margin-left: 4px;
+}
+#toggleEditBtn {
+  font-size: 12px; 
+  padding: 4px 6px;
+  cursor: pointer;
+  display: inline-block;
+  margin-left: 4px; /* separa un poco del input y la X */
+}
 </style>
-</head>
-<body>
 
 <!-- ===================== BLOQUE 2: Inputs URL y Config ===================== -->
 <div class="row">
@@ -159,12 +185,44 @@ body.dark #configPanel{
 <textarea id="rawDisplay" readonly></textarea>
 <div id="copyMsg">Copiado al portapapeles</div>
 
-<!-- ===================== BLOQUE 7: Filtro Global ===================== -->
-<div class="globalFilterContainer" style="display:flex; align-items:center; gap:4px;">
-  <input class="globalFilter" placeholder="Buscar en toda la tabla..." style="flex:1;" />
-  <span class="globalClearBtn">✕</span>
-  <button id="toggleEditBtn" style="font-size:12px;">✏️ Editar</button>
+<!-- ===================== BLOQUE 7: Contenedor de Búsqueda Global y Editar ===================== -->
+<div id="globalFilterContainer" class="globalFilterContainer" style="display:none; margin:5px 10px; gap:6px; align-items:center;">
+  <div style="position:relative; display:inline-block;">
+    <input id="globalFilter" class="globalFilter" placeholder="Buscar en toda la tabla..." style="width:200px; padding:4px 25px 4px 8px; font-size:12px; box-sizing:border-box; border-radius:4px;" />
+    <span id="globalClearBtn" class="globalClearBtn" style="
+        position:absolute;
+        right:4px;
+        top:50%;
+        transform:translateY(-50%);
+        color:red;
+        font-weight:bold;
+        font-size:14px;
+        cursor:pointer;
+        display:none;
+        user-select:none;
+    ">✕</span>
+  </div>
+  <button id="toggleEditBtn" style="font-size:12px; padding:4px 6px;">✏️ Editar</button>
 </div>
+
+<script>
+const gFilter = document.getElementById('globalFilter');
+const gClear = document.getElementById('globalClearBtn');
+
+gFilter.addEventListener('input', () => {
+  gClear.style.display = gFilter.value ? 'inline-block' : 'none';
+  renderFilteredAndSorted();
+});
+
+gClear.addEventListener('click', () => {
+  gFilter.value = '';
+  gClear.style.display = 'none';
+  renderFilteredAndSorted();
+});
+</script>
+
+
+
 
 
 
@@ -338,11 +396,13 @@ function updateHeaderArrows(tbl){
   });
 }
 
-/* ===================== BLOQUE 9.5: Renderizado filtrado y ordenamiento ===================== */
 function renderFilteredAndSorted(){
   let filtered = currentRows.slice();
   const tbl = tableWrap.querySelector('table');
-  if(!tbl) return;
+  if(!tbl) {
+    globalFilterContainer.style.display='none';
+    return;
+  }
   const tbody = tbl.tBodies[0];
   tbody.innerHTML='';
 
@@ -380,8 +440,10 @@ function renderFilteredAndSorted(){
     tr.addEventListener('mouseleave', ()=>Array.from(tr.cells).forEach(td=>td.style.background = baseColor));
   });
 
-  globalFilterContainer.style.display = currentRows.length && !showRaw ? 'block':'none';
+  // Mostrar u ocultar el filtro global y botón editar
+  globalFilterContainer.style.display = currentRows.length && !showRaw ? 'flex' : 'none';
 }
+
 
 /* ===================== BLOQUE 9.6: Raw / JSON ===================== */
 function updateTableFromJson(raw){
@@ -490,111 +552,6 @@ downloadSelect.addEventListener('change', () => {
   downloadSelect.value = '';
 });
 
-<!-- ===================== BLOQUE 9.10/9.11: Tema Personalizado, Edición y Historial ===================== -->
-
-/* ----- Variables Tema Personalizado ----- */
-const resetThemeBtn = document.getElementById('resetThemeBtn');
-let customTheme = JSON.parse(localStorage.getItem('customTheme') || '{}');
-
-/* Cargar tema personalizado */
-function loadCustomTheme() {
-  if(customTheme.bg) document.body.style.background = customTheme.bg;
-  if(customTheme.text) document.body.style.color = customTheme.text;
-  if(customTheme.font) document.body.style.fontFamily = customTheme.font;
-  if(customTheme.cellEven) window.cellEvenColor = customTheme.cellEven;
-  if(customTheme.cellOdd) window.cellOddColor = customTheme.cellOdd;
-}
-loadCustomTheme();
-
-/* Aplicar cambios del tema personalizado */
-function applyCustomTheme() {
-  customTheme = {
-    bg: bgColorInput.value,
-    text: textColorInput.value,
-    font: fontInput.value,
-    cellEven: cellColorEvenInput.value,
-    cellOdd: cellColorOddInput.value
-  };
-  localStorage.setItem('customTheme', JSON.stringify(customTheme));
-  loadCustomTheme();
-  renderFilteredAndSorted();
-}
-applyThemeBtn.addEventListener('click', applyCustomTheme);
-
-/* Resetear al tema original */
-resetThemeBtn.addEventListener('click', () => {
-  customTheme = {};
-  localStorage.removeItem('customTheme');
-  document.body.style.background = '';
-  document.body.style.color = '';
-  document.body.style.fontFamily = '';
-  renderFilteredAndSorted();
-});
-
-/* Cerrar panel de tema personalizado cuando se cierra configuración */
-configBtn.addEventListener('click', () => {
-  if(configPanel.style.display === 'block'){
-    // Si se estaba abriendo, solo mostramos configPanel
-    configPanel.style.display = 'block';
-  } else {
-    // Si se estaba cerrando, ocultamos también tema personalizado
-    customThemePanel.style.display = 'none';
-  }
-});
-
-/* ----- Hook para colorear filas con tema personalizado ----- */
-const originalRender = renderFilteredAndSorted;
-renderFilteredAndSorted = function() {
-  originalRender();
-  const tbl = tableWrap.querySelector('table');
-  if(!tbl) return;
-  Array.from(tbl.tBodies[0].rows).forEach((tr,i)=>{
-    const baseColor = i%2===0 ? (customTheme.cellEven || (theme==='dark'?'#2a2a2a':'#f9f9f9'))
-                               : (customTheme.cellOdd || (theme==='dark'?'#262626':'#e8f0ff'));
-    Array.from(tr.cells).forEach(td=>td.style.background = baseColor);
-  });
-};
-
-/* ----- Botón Editar Tabla ----- */
-const toggleEditBtn = document.getElementById('toggleEditBtn');
-let editMode = false;
-
-toggleEditBtn.addEventListener('click', () => {
-  editMode = !editMode;
-  const tbl = tableWrap.querySelector('table');
-  if(!tbl) return;
-  Array.from(tbl.tBodies[0].rows).forEach(tr => {
-    Array.from(tr.cells).forEach(td => {
-      td.contentEditable = editMode;
-      td.style.outline = editMode ? '1px solid orange' : '';
-    });
-  });
-  toggleEditBtn.textContent = editMode ? '💾 Guardar' : '✏️ Editar';
-  if(!editMode) {
-    // Guardar cambios de vuelta al JSON
-    currentRows.forEach((r,i) => {
-      currentHeaders.forEach((h,j) => {
-        r[h] = tbl.tBodies[0].rows[i].cells[j].textContent;
-      });
-    });
-    // Actualizar textarea con la versión editada
-    jsonin.value = JSON.stringify(currentRows, null, 2);
-    // Actualizar raw si se está mostrando
-    if(showRaw) updateRawDisplay();
-    renderFilteredAndSorted();
-  }
-});
-
-/* ----- Cerrar paneles al hacer clic fuera ----- */
-document.addEventListener('click', e => {
-  if(!configPanel.contains(e.target) && !configBtn.contains(e.target)){
-    configPanel.style.display = 'none';
-  }
-  if(!customThemePanel.contains(e.target) && !openCustomThemeBtn.contains(e.target)){
-    customThemePanel.style.display = 'none';
-  }
-});
-
 /* ----- Historial JSON solo para JSON originales ----- */
 const jsonHistorySelect = document.getElementById('jsonHistorySelect');
 let jsonHistory = JSON.parse(localStorage.getItem('jsonHistory') || '[]');
@@ -643,6 +600,9 @@ if(lastJson) {
   jsonin.value = lastJson;
   updateTableFromJson(lastJson, {original:true});
 }
+
+/* ----- Modificar listener del textarea para historial correcto ----- */
+jsonin.addEventListener('input', ()=>updateTableFromJson(jsonin.value, {original:true}));
 
 </script>
 </body>
