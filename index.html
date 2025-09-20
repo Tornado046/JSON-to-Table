@@ -1,162 +1,618 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<title>JSON a Tabla Inteligente con Buscador</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>JSON → Tabla Mejorada</title>
+
+<!-- ===================== BLOQUE 1: CSS ===================== -->
 <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    textarea { width: 100%; height: 150px; font-family: monospace; font-size: 14px; }
-    button { margin: 5px 5px 5px 0; padding: 5px 10px; cursor: pointer; }
-    input[type="text"] { padding: 5px; margin: 5px; width: 200px; }
-    table { border-collapse: collapse; width: 100%; margin-top: 20px; table-layout: fixed; word-wrap: break-word; }
-    th, td { border: 1px solid #ccc; padding: 5px; text-align: left; vertical-align: top; }
-    th { background-color: #f4f4f4; }
-    tr:hover { background-color: #eef; }
-    #tablaContainer { max-height: 500px; overflow: auto; }
+/* ---------- General ---------- */
+body {
+  font-family: system-ui, Segoe UI, Roboto, Arial;
+  margin: 0;
+  color: #111;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+textarea#jsonin {
+  width: 100%;
+  height: 160px;
+  font-family: monospace;
+  padding: 10px;
+  box-sizing: border-box;
+  font-size: 12px;
+  background: #fff;
+  color: #000;
+}
+
+.row {
+  display: flex;
+  gap: 10px;
+  margin: 5px 10px;
+}
+
+button, input, select {
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #bbb;
+  background: #fafafa;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+input[type=text], select { box-sizing: border-box; }
+
+/* ---------- Tabla ---------- */
+#tableWrap { flex: 1; overflow: auto; margin: 5px 10px 10px 10px; }
+
+table {
+  border-collapse: collapse;
+  font-family: monospace;
+  font-size: 12px;
+  table-layout: auto;
+}
+
+th, td {
+  border: 1px solid #ddd;
+  padding: 4px;
+  text-align: left;
+  white-space: nowrap;
+  user-select: none;
+}
+
+th { position: sticky; top: 0; background: #f2f2f2; z-index: 2; cursor: pointer; }
+
+tr:nth-child(even) td { background: #fff; }
+tr:nth-child(odd) td { background: #fff; }
+
+tr:hover td { background: #eee; }
+
+/* ---------- Raw ---------- */
+#rawDisplay {
+  display: none;
+  height: auto;
+  min-height: 160px;
+  margin: 5px;
+  padding: 10px;
+  font-family: monospace;
+  font-size: 12px;
+  overflow: auto;
+  border: 1px solid #bbb;
+  white-space: pre;
+  background: #fff;
+  color: #000;
+}
+
+#copyMsg {
+  position: fixed;
+  background: #d9edf7;
+  padding: 6px 10px;
+  border-radius: 6px;
+  color: #000;
+  display: none;
+  z-index: 9999;
+  font-size: 12px;
+  transition: top 0.2s, left 0.2s, opacity 0.2s;
+}
+
+/* ---------- Panel Configuración ---------- */
+#configPanel, #customThemePanel {
+  display: none;
+  position: absolute;
+  top: 40px;
+  right: 10px;
+  background: #fafafa;
+  border: 1px solid #bbb;
+  padding: 10px;
+  border-radius: 6px;
+  z-index: 999;
+  width: 200px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+#configPanel label, #customThemePanel label { font-size: 12px; }
+#configPanel button, #customThemePanel button { font-size: 12px; padding: 2px 6px; }
+#configPanel input[type=checkbox] { transform: scale(1.1); margin-left: 5px; }
 </style>
 </head>
 <body>
 
-<h1>Convertidor de JSON a Tabla con Buscador</h1>
-<textarea id="jsonInput" placeholder="Pega tu JSON aquí"></textarea><br>
-<button onclick="generarTabla()">Generar Tabla</button>
-<button onclick="limpiarTexto()">Limpiar JSON</button>
-<button onclick="seleccionarTabla()">Seleccionar Tabla</button>
+<!-- ===================== BLOQUE 2: Inputs URL y Config ===================== -->
+<div class="row">
+  <input id="urlIn" placeholder="URL con JSON" style="flex:1;min-width:200px;height:28px"/>
+  <button id="fetchBtn">Cargar URL</button>
+  <button id="configBtn">⚙️ Configuración</button>
+</div>
 
-<h3>Búsqueda Global:</h3>
-<input type="text" id="busquedaGlobal" oninput="buscarGlobal()" placeholder="Buscar en toda la tabla">
+<!-- ===================== BLOQUE 3: Panel de Configuración ===================== -->
+<div id="configPanel" style="display:none; position:absolute; top:40px; right:10px; background:#fafafa; border:1px solid #bbb; padding:10px; border-radius:6px; z-index:1000; width:200px; box-shadow:0 2px 8px rgba(0,0,0,0.2);">
+  <button id="themeToggleBtn" style="width:100%; margin-bottom:8px;">🌙/☀️</button>
+  <label style="display:block; font-size:12px;">
+    <input type="checkbox" id="autoThemeChk"> Auto-adaptar tema
+  </label>
+  <button id="openCustomThemeBtn" style="width:100%; margin-top:8px; font-size:12px;">🎨 Tema personalizado</button>
+</div>
 
-<h3>Búsqueda por Columna:</h3>
-<select id="columnaSelect"></select>
-<input type="text" id="busquedaColumna" oninput="buscarPorColumna()" placeholder="Buscar en columna seleccionada">
+<!-- ===================== BLOQUE 3.1: Panel Tema Personalizado ===================== -->
+<div id="customThemePanel" style="display:none; position:absolute; top:100px; right:10px; background:#fafafa; border:1px solid #bbb; padding:10px; border-radius:6px; z-index:999; width:220px; box-shadow:0 2px 8px rgba(0,0,0,0.2); transition:background 0.3s,color 0.3s;">
+  <h4 style="margin:0 0 8px 0; font-size:14px;">Tema Personalizado</h4>
+  
+  <div style="margin-bottom:6px;">
+    <label style="font-size:12px;">Fondo:</label>
+    <input type="color" id="bgColorInput" value="#ffffff" style="width:100%;">
+  </div>
+  <div style="margin-bottom:6px;">
+    <label style="font-size:12px;">Texto:</label>
+    <input type="color" id="textColorInput" value="#000000" style="width:100%;">
+  </div>
+  <div style="margin-bottom:6px;">
+    <label style="font-size:12px;">Tipografía:</label>
+    <input type="text" id="fontInput" placeholder="Arial, Roboto..." style="width:100%;">
+  </div>
+  <div style="margin-bottom:6px;">
+    <label style="font-size:12px;">Celdas pares:</label>
+    <input type="color" id="cellColorEvenInput" value="#f9f9f9" style="width:100%;">
+  </div>
+  <div style="margin-bottom:6px;">
+    <label style="font-size:12px;">Celdas impares:</label>
+    <input type="color" id="cellColorOddInput" value="#e8f0ff" style="width:100%;">
+  </div>
+  <button id="applyThemeBtn" style="width:100%; padding:4px 0; font-size:12px;">Aplicar Tema</button>
+</div>
 
-<div id="tablaContainer"></div>
 
+<!-- ===================== BLOQUE 4: JSON Input ===================== -->
+<div class="row">
+  <textarea id="jsonin" placeholder='Pega JSON aquí'></textarea>
+</div>
+
+<!-- ===================== BLOQUE 5: Botones Limpiar / Separador / Descarga / Raw / Copiar ===================== -->
+<div class="row">
+  <button id="clearBtn">Limpiar JSON</button>
+</div>
+<div class="row">
+  <label>Separador:</label>
+  <select id="separatorSelect">
+    <option value="\t">Tab</option>
+    <option value=";">;</option>
+    <option value=",">,</option>
+  </select>
+  <select id="downloadSelect" disabled>
+    <option value="">Descargar...</option>
+    <option value="csv">CSV</option>
+    <option value="xlsx">XLSX</option>
+    <option value="txt">TXT</option>
+  </select>
+  <button id="toggleRawBtn" disabled>Mostrar Raw</button>
+  <button id="copyBtn" disabled>Copiar tabla</button>
+</div>
+
+<!-- ===================== BLOQUE 6: Raw Display y Mensaje Copiado ===================== -->
+<textarea id="rawDisplay" readonly></textarea>
+<div id="copyMsg">Copiado al portapapeles</div>
+
+<!-- ===================== BLOQUE 7: Filtro Global ===================== -->
+<div class="globalFilterContainer">
+  <input class="globalFilter" placeholder="Buscar en toda la tabla..." />
+  <span class="globalClearBtn">✕</span>
+</div>
+
+<!-- ===================== BLOQUE 8: Contenedor de Tabla ===================== -->
+<div id="tableWrap"></div>
+
+<!-- ===================== BLOQUE 9: Script Principal ===================== -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-let tablaGenerada;
+/* ===================== BLOQUE 9.1: Variables y Elementos ===================== */
+const jsonin=document.getElementById('jsonin');
+const tableWrap=document.getElementById('tableWrap');
+const downloadSelect=document.getElementById('downloadSelect');
+const copyBtn=document.getElementById('copyBtn');
+const clearBtn=document.getElementById('clearBtn');
+const urlIn=document.getElementById('urlIn');
+const fetchBtn=document.getElementById('fetchBtn');
+const separatorSelect=document.getElementById('separatorSelect');
+const globalFilter=document.querySelector('.globalFilter');
+const globalClearBtn=document.querySelector('.globalClearBtn');
+const toggleRawBtn=document.getElementById('toggleRawBtn');
+const rawDisplay=document.getElementById('rawDisplay');
+const copyMsg=document.getElementById('copyMsg');
+const configBtn=document.getElementById('configBtn');
+const configPanel=document.getElementById('configPanel');
+const themeToggleBtn=document.getElementById('themeToggleBtn');
+const autoThemeChk=document.getElementById('autoThemeChk');
+const globalFilterContainer=document.querySelector('.globalFilterContainer');
 
-function generarTabla() {
-    const input = document.getElementById("jsonInput").value;
-    let data;
+let currentRows=[], currentHeaders=[], sortState={}, showRaw=false;
+let theme=window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
 
-    try {
-        data = JSON.parse(input);
-    } catch(e) {
-        alert("JSON inválido");
-        return;
-    }
-
-    const container = document.getElementById("tablaContainer");
-    container.innerHTML = "";
-
-    function render(data) {
-        if (Array.isArray(data)) {
-            return crearTabla(data);
-        } else if (typeof data === "object" && data !== null) {
-            const arrays = Object.values(data).filter(v => Array.isArray(v));
-            if (arrays.length > 0) {
-                const div = document.createElement("div");
-                arrays.forEach(arr => div.appendChild(render(arr)));
-                return div;
-            } else {
-                return crearTabla([data]);
-            }
-        } else {
-            return document.createTextNode(data);
-        }
-    }
-
-    function crearTabla(array) {
-        const table = document.createElement("table");
-        tablaGenerada = table; // Guardamos para búsqueda
-
-        const thead = document.createElement("thead");
-        const tbody = document.createElement("tbody");
-
-        const keys = Array.from(new Set(array.flatMap(obj => typeof obj === 'object' && obj !== null ? Object.keys(obj) : [])));
-
-        if (keys.length === 0) return document.createTextNode(JSON.stringify(array));
-
-        const trHead = document.createElement("tr");
-        keys.forEach(key => {
-            const th = document.createElement("th");
-            th.textContent = key;
-            trHead.appendChild(th);
-        });
-        thead.appendChild(trHead);
-
-        array.forEach(obj => {
-            const tr = document.createElement("tr");
-            keys.forEach(key => {
-                const td = document.createElement("td");
-                if (typeof obj[key] === "object" && obj[key] !== null) {
-                    td.appendChild(render(obj[key]));
-                } else {
-                    td.textContent = obj[key] !== undefined ? obj[key] : "";
-                }
-                tr.appendChild(td);
-            });
-            tbody.appendChild(tr);
-        });
-
-        table.appendChild(thead);
-        table.appendChild(tbody);
-
-        // Llenar select de columnas
-        const columnaSelect = document.getElementById("columnaSelect");
-        columnaSelect.innerHTML = "";
-        keys.forEach((key, idx) => {
-            const option = document.createElement("option");
-            option.value = idx;
-            option.textContent = key;
-            columnaSelect.appendChild(option);
-        });
-
-        return table;
-    }
-
-    container.appendChild(render(data));
+/* ===================== BLOQUE 9.2: Funciones utilitarias ===================== */
+function isObj(x){ return x && typeof x==='object' && !Array.isArray(x); }
+function flattenObject(obj,prefix='',out={}){ 
+  if(Array.isArray(obj)){ out[prefix.slice(0,-1)||'array']=JSON.stringify(obj); return out;}
+  for(const k of Object.keys(obj||{})){
+    const v=obj[k],key=prefix+k+'.';
+    if(isObj(v)) flattenObject(v,key,out);
+    else if(Array.isArray(v)) out[key.slice(0,-1)]=JSON.stringify(v);
+    else out[key.slice(0,-1)]=v;
+  }
+  return out;
+}
+function getRowsFromJson(parsed){
+  if(Array.isArray(parsed)) return parsed.map(o=>flattenObject(o));
+  for(const k of ['items','rankings','data','rows','result','results']) if(Array.isArray(parsed[k])) return parsed[k].map(o=>flattenObject(o));
+  for(const k of Object.keys(parsed)) if(Array.isArray(parsed[k])) return parsed[k].map(o=>flattenObject(o));
+  return [flattenObject(parsed)];
+}
+function rowsToCsv(rows,sep){
+  if(!rows||rows.length===0) return '';
+  const allKeys=new Set(); rows.forEach(r=>Object.keys(r).forEach(k=>allKeys.add(k)));
+  const headers=Array.from(allKeys);
+  const esc=v=>{ if(v==null) return ''; const s=String(v); return /["\n,]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
+  const lines=[headers.join(sep)];
+  for(const r of rows) lines.push(headers.map(h=>esc(r[h])).join(sep));
+  return lines.join('\n');
 }
 
-function limpiarTexto() {
-    document.getElementById("jsonInput").value = "";
-    document.getElementById("tablaContainer").innerHTML = "";
-    document.getElementById("busquedaGlobal").value = "";
-    document.getElementById("busquedaColumna").value = "";
+// ===================== Historial de JSONs =====================
+const HISTORIAL_KEY = 'jsonHistory';
+const MAX_HISTORY = 100;
+
+// Obtener historial
+function getJsonHistory() {
+  return JSON.parse(localStorage.getItem(HISTORIAL_KEY) || '[]');
 }
 
-function seleccionarTabla() {
-    const container = document.getElementById("tablaContainer");
-    if (container.innerHTML === "") {
-        alert("No hay tabla generada para seleccionar.");
-        return;
-    }
-    const range = document.createRange();
-    range.selectNode(container);
-    const sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(range);
+// Guardar un nuevo JSON en historial
+function addJsonToHistory(jsonStr) {
+  let history = getJsonHistory();
+  // Evitar duplicados exactos
+  history = history.filter(item => item !== jsonStr);
+  history.unshift(jsonStr); // agregar al inicio
+  if(history.length > MAX_HISTORY) history = history.slice(0, MAX_HISTORY);
+  localStorage.setItem(HISTORIAL_KEY, JSON.stringify(history));
+  renderJsonHistory();
 }
 
-function buscarGlobal() {
-    const term = document.getElementById("busquedaGlobal").value.toLowerCase();
-    if (!tablaGenerada) return;
-    Array.from(tablaGenerada.tBodies[0].rows).forEach(row => {
-        const text = row.textContent.toLowerCase();
-        row.style.display = text.includes(term) ? "" : "none";
+// Renderizar historial en panel de configuración
+function renderJsonHistory() {
+  const panel = document.getElementById('configPanel');
+  let select = document.getElementById('jsonHistorySelect');
+  if(!select) {
+    select = document.createElement('select');
+    select.id = 'jsonHistorySelect';
+    select.style.width = '100%';
+    select.style.marginTop = '8px';
+    select.style.fontSize = '12px';
+    panel.appendChild(select);
+
+    // Cargar JSON al seleccionar
+    select.addEventListener('change', () => {
+      const val = select.value;
+      if(val) {
+        jsonin.value = val;
+        updateTableFromJson(val);
+      }
     });
+  }
+
+  const history = getJsonHistory();
+  select.innerHTML = '';
+  select.appendChild(new Option('Selecciona un JSON del historial', ''));
+  history.forEach((item, idx) => {
+    const preview = item.length > 30 ? item.slice(0,30).replace(/\n/g,' ')+'...' : item;
+    select.appendChild(new Option(preview, item));
+  });
 }
 
-function buscarPorColumna() {
-    const term = document.getElementById("busquedaColumna").value.toLowerCase();
-    const colIdx = document.getElementById("columnaSelect").value;
-    if (!tablaGenerada) return;
-    Array.from(tablaGenerada.tBodies[0].rows).forEach(row => {
-        const cell = row.cells[colIdx];
-        row.style.display = cell && cell.textContent.toLowerCase().includes(term) ? "" : "none";
+// Cargar historial al iniciar
+renderJsonHistory();
+
+
+// ===================== BLOQUE 9.3: Configuración y Tema =====================
+const savedTheme = localStorage.getItem('theme');
+theme = savedTheme || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+document.body.classList.toggle('dark', theme === 'dark');
+themeToggleBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
+
+const savedAutoTheme = localStorage.getItem('autoTheme');
+autoThemeChk.checked = savedAutoTheme === null ? true : savedAutoTheme === 'true';
+
+configBtn.addEventListener('click', () => {
+  configPanel.style.display = configPanel.style.display === 'block' ? 'none' : 'block';
+});
+document.addEventListener('click', e => {
+  if (!configPanel.contains(e.target) && !configBtn.contains(e.target)) configPanel.style.display = 'none';
+});
+
+themeToggleBtn.addEventListener('click', () => {
+  document.body.classList.toggle('dark');
+  theme = document.body.classList.contains('dark') ? 'dark' : 'light';
+  themeToggleBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
+  localStorage.setItem('theme', theme);
+  renderTable();
+  renderFilteredAndSorted();
+});
+
+autoThemeChk.addEventListener('change', () => {
+  localStorage.setItem('autoTheme', autoThemeChk.checked);
+  if (autoThemeChk.checked) {
+    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.body.classList.toggle('dark', theme === 'dark');
+    themeToggleBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
+    localStorage.setItem('theme', theme);
+    renderTable();
+    renderFilteredAndSorted();
+  }
+});
+
+// Abrir/cerrar panel de tema personalizado
+const customThemePanel = document.getElementById('customThemePanel');
+const openCustomThemeBtn = document.getElementById('openCustomThemeBtn');
+openCustomThemeBtn.addEventListener('click', () => {
+  customThemePanel.style.display = (customThemePanel.style.display === 'block') ? 'none' : 'block';
+});
+
+<!-- ===================== BLOQUE 9.4: Renderizado Tabla (con encabezados activos) ===================== -->
+function renderTable(){
+  tableWrap.innerHTML='';
+  if(currentRows.length===0){ tableWrap.innerText='No rows'; return; }
+
+  const tbl = document.createElement('table');
+  const thead = tbl.createTHead();
+  const headRow = thead.insertRow();
+
+  currentHeaders.forEach((h, idx) => {
+    const th = document.createElement('th');
+    const flexDiv = document.createElement('div');
+    flexDiv.style.display='flex';
+    flexDiv.style.alignItems='center';
+    flexDiv.style.justifyContent='space-between';
+
+    const span = document.createElement('span');
+    span.textContent = getSortArrow(h)+' '+h;
+    span.style.color = sortState[h]!==undefined ? (theme==='dark'?'#b0c4d0':'blue'):'black';
+    flexDiv.appendChild(span);
+
+    const inputContainer = document.createElement('div'); 
+    inputContainer.className='columnFilterContainer';
+    const input = document.createElement('input'); 
+    input.className='columnFilter'; 
+    input.placeholder='';
+    const clearBtnCol = document.createElement('span'); 
+    clearBtnCol.className='clearBtn'; 
+    clearBtnCol.textContent='✕';
+    clearBtnCol.addEventListener('click',()=>{
+      input.value=''; renderFilteredAndSorted(); clearBtnCol.style.display='none';
     });
+    input.addEventListener('input',()=>{
+      clearBtnCol.style.display=input.value?'inline-block':'none'; 
+      renderFilteredAndSorted(); 
+    });
+    inputContainer.appendChild(input); 
+    inputContainer.appendChild(clearBtnCol);
+    flexDiv.appendChild(inputContainer);
+
+    th.appendChild(flexDiv);
+    th.addEventListener('click', ()=>{
+      const asc = !sortState[h]; 
+      sortState = {}; 
+      sortState[h] = asc;
+      renderFilteredAndSorted();
+      updateHeaderArrows(tbl);
+    });
+    headRow.appendChild(th);
+  });
+
+  tbl.createTBody();
+  tableWrap.appendChild(tbl);
+  updateHeaderArrows(tbl);
 }
+
+function getSortArrow(header){
+  return sortState[header]===true?'↑':sortState[header]===false?'↓':'⬍';
+}
+
+function updateHeaderArrows(tbl){
+  Array.from(tbl.tHead.rows[0].cells).forEach(th=>{
+    const span = th.querySelector('span');
+    const h = span.textContent.replace(/^⬍ |^↑ |^↓ /,'');
+    span.textContent = getSortArrow(h)+' '+h;
+    th.className = sortState[h]!==undefined ? 'activeHeader' : '';
+  });
+}
+
+/* ===================== BLOQUE 9.5: Renderizado filtrado y ordenamiento ===================== */
+let tableEditable = false; // variable global para activar/desactivar edición
+
+// Botón general de edición junto al filtro global
+const editToggleBtn = document.createElement('span');
+editToggleBtn.textContent = '✏️';
+editToggleBtn.style.cursor = 'pointer';
+editToggleBtn.style.marginLeft = '6px';
+editToggleBtn.title = 'Activar/Desactivar edición de tabla';
+document.querySelector('.globalFilterContainer').appendChild(editToggleBtn);
+
+editToggleBtn.addEventListener('click', () => {
+  tableEditable = !tableEditable;
+  editToggleBtn.textContent = tableEditable ? '✅' : '✏️';
+  const tbl = tableWrap.querySelector('table');
+  if(tbl){
+    Array.from(tbl.tBodies[0].rows).forEach(tr=>{
+      Array.from(tr.cells).forEach(td=>{
+        td.contentEditable = tableEditable;
+        td.style.background = tableEditable ? '#fffa8c' : '#fff';
+      });
+    });
+  }
+});
+
+function renderFilteredAndSorted(){
+  let filtered = currentRows.slice();
+  const tbl = tableWrap.querySelector('table');
+  if(!tbl) return;
+  const tbody = tbl.tBodies[0];
+  tbody.innerHTML='';
+
+  Array.from(tbl.tHead.rows[0].cells).forEach((th, idx)=>{
+    const val = th.querySelector('input')?.value.toLowerCase()||'';
+    if(val) filtered = filtered.filter(r => String(r[currentHeaders[idx]]??'').toLowerCase().includes(val));
+  });
+
+  const gval = globalFilter.value.toLowerCase();
+  if(gval && !showRaw) filtered = filtered.filter(r => Object.values(r).some(v => String(v??'').toLowerCase().includes(gval)));
+
+  const sortKey = Object.keys(sortState)[0];
+  if(sortKey){
+    const asc = sortState[sortKey];
+    filtered.sort((a,b)=>{
+      let va = a[sortKey], vb = b[sortKey];
+      if(typeof va==='object') va=JSON.stringify(va);
+      if(typeof vb==='object') vb=JSON.stringify(vb);
+      if(!isNaN(va) && !isNaN(vb)) return asc ? va - vb : vb - va;
+      return asc ? String(va??'').localeCompare(String(vb??'')) : String(vb??'').localeCompare(String(va??''));
+    });
+  }
+
+  filtered.forEach((r,i)=>{
+    const tr = tbody.insertRow();
+    currentHeaders.forEach(h=>{
+      const td = tr.insertCell();
+      let val = r[h];
+      if(typeof val==='object') val = JSON.stringify(val);
+      td.textContent = val??'';
+      td.contentEditable = tableEditable;
+      td.spellcheck = false;
+      td.style.background = tableEditable ? '#fffa8c' : '#fff';
+      td.addEventListener('input', ()=>{
+        currentRows[i][h] = !isNaN(td.textContent) ? Number(td.textContent) : td.textContent;
+        if(showRaw) updateRawDisplay();
+      });
+    });
+
+    tr.addEventListener('mouseenter', ()=>Array.from(tr.cells).forEach(td=>td.style.background = tableEditable ? '#fffa8c' : '#eee'));
+    tr.addEventListener('mouseleave', ()=>Array.from(tr.cells).forEach(td=>td.style.background = tableEditable ? '#fffa8c' : '#fff'));
+  });
+
+  globalFilterContainer.style.display = currentRows.length && !showRaw ? 'block':'none';
+}
+
+/* ===================== BLOQUE 9.6: Raw / JSON ===================== */
+function updateTableFromJson(raw){
+  if(!raw.trim()){
+    tableWrap.innerHTML='';
+    toggleRawBtn.disabled=true; copyBtn.disabled=true; downloadSelect.disabled=true;
+    globalFilterContainer.style.display='none';
+    return;
+  }
+
+  try{
+    const parsed = JSON.parse(raw);
+    currentRows=getRowsFromJson(parsed);
+    currentHeaders=Array.from(currentRows.reduce((s,r)=>{Object.keys(r).forEach(k=>s.add(k)); return s;}, new Set()));
+    sortState={};
+
+    if(showRaw){ rawDisplay.style.display='block'; tableWrap.style.display='none'; updateRawDisplay(); }
+    else{ rawDisplay.style.display='none'; tableWrap.style.display='block'; }
+
+    renderTable(); renderFilteredAndSorted();
+    toggleRawBtn.disabled=false; copyBtn.disabled=false; downloadSelect.disabled=false;
+
+    // ✅ Guardar en historial
+    addJsonToHistory(raw);
+
+  }catch(e){
+    tableWrap.innerText='JSON inválido';
+    toggleRawBtn.disabled=true; copyBtn.disabled=true; downloadSelect.disabled=true;
+  }
+}
+
+function updateRawDisplay(){
+  let sep = separatorSelect.value==='\\t' ? '\t' : separatorSelect.value;
+  let csv = rowsToCsv(currentRows, sep);
+  rawDisplay.value = csv;
+  rawDisplay.style.width='auto';
+  rawDisplay.select();
+  rawDisplay.classList.add('blink');
+  setTimeout(()=>rawDisplay.classList.remove('blink'),300);
+}
+
+/* ===================== BLOQUE 9.7: Eventos Input y Botones ===================== */
+jsonin.addEventListener('input',()=>updateTableFromJson(jsonin.value));
+separatorSelect.addEventListener('change',()=>{ if(showRaw) updateRawDisplay(); });
+toggleRawBtn.addEventListener('click',()=>{ showRaw=!showRaw; toggleRawBtn.textContent=showRaw?'Quitar Raw':'Mostrar Raw'; updateTableFromJson(jsonin.value); });
+clearBtn.addEventListener('click',()=>{ jsonin.value=''; updateTableFromJson(''); rawDisplay.style.display='none'; showRaw=false; });
+globalFilter.addEventListener('input',()=>{ renderFilteredAndSorted(); globalClearBtn.style.display=globalFilter.value?'inline-block':'none'; });
+globalClearBtn.addEventListener('click',()=>{ globalFilter.value=''; renderFilteredAndSorted(); globalClearBtn.style.display='none'; });
+
+/* ===================== BLOQUE 9.8: Copiar tabla ===================== */
+copyBtn.addEventListener('click',(e)=>{
+  const sep=separatorSelect.value==='\\t'?'\t':separatorSelect.value;
+  const csv=rowsToCsv(currentRows,sep);
+  navigator.clipboard.writeText(csv).then(()=>{
+    copyMsg.style.top=(e.clientY+10)+'px';
+    copyMsg.style.left=(e.clientX+10)+'px';
+    copyMsg.style.display='block';
+    setTimeout(()=>copyMsg.style.display='none',1500);
+  });
+});
+
+<!-- ===================== BLOQUE 9.9: Fetch y Descarga ===================== -->
+fetchBtn.addEventListener('click', async () => {
+  const u = urlIn.value.trim(); 
+  if (!u) return alert('Pon una URL');
+  try {
+    fetchBtn.disabled = true;
+    const res = await fetch(u, { cache: 'no-store' });
+    const text = await res.text();
+    try { 
+      const parsed = JSON.parse(text); 
+      jsonin.value = JSON.stringify(parsed, null, 2);
+    } catch (_) { 
+      const m = text.match(/(\{[\s\S]*\}|\[[\s\S]*\])/); 
+      jsonin.value = m ? m[0] : text;
+    }
+    updateTableFromJson(jsonin.value);
+  } catch (e) { 
+    alert('Error al cargar: ' + e.message); 
+  } finally { 
+    fetchBtn.disabled = false; 
+  }
+});
+
+downloadSelect.addEventListener('change', () => {
+  const val = downloadSelect.value; 
+  const sep = separatorSelect.value === '\\t' ? '\t' : separatorSelect.value;
+  if (!val) return;
+
+  const triggerDownload = (blob, filename) => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
+  if (val === 'csv' || val === 'txt') {
+    const csv = rowsToCsv(currentRows, sep);
+    const blob = new Blob([csv], { type: 'text/' + val });
+    triggerDownload(blob, 'export.' + val);
+  } else if (val === 'xlsx') {
+    const ws = XLSX.utils.json_to_sheet(currentRows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+    XLSX.writeFile(wb, 'export.xlsx');
+  }
+
+  // Resetear select para poder descargar el mismo formato nuevamente
+  downloadSelect.value = '';
+});
+
+
 </script>
-
 </body>
 </html>
