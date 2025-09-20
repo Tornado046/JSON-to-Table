@@ -8,114 +8,71 @@
 <!-- ===================== BLOQUE 1: CSS ===================== -->
 <style>
 /* ---------- General ---------- */
-body {
-  font-family: system-ui, Segoe UI, Roboto, Arial;
-  margin: 0;
-  color: #111;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-textarea#jsonin {
-  width: 100%;
-  height: 160px;
-  font-family: monospace;
-  padding: 10px;
-  box-sizing: border-box;
-  font-size: 12px;
-  background: #fff;
-  color: #000;
-}
-
-.row {
-  display: flex;
-  gap: 10px;
-  margin: 5px 10px;
-}
-
-button, input, select {
-  padding: 4px 8px;
-  border-radius: 4px;
-  border: 1px solid #bbb;
-  background: #fafafa;
-  cursor: pointer;
-  font-size: 12px;
-}
-
-input[type=text], select { box-sizing: border-box; }
+body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:0;color:#111;height:100vh;display:flex;flex-direction:column;transition:background 0.3s,color 0.3s;}
+body.dark{background:#1e1e1e;color:#eee;}
+textarea#jsonin{width:100%;height:160px;font-family:monospace;padding:10px;box-sizing:border-box;font-size:12px;background:#fff;color:#000;transition:background 0.3s,color 0.3s;}
+body.dark textarea#jsonin{background:#2a2a2a;color:#eee;}
+.row{display:flex;gap:10px;margin:5px 10px;}
+button,input,select{padding:4px 8px;border-radius:4px;border:1px solid #bbb;background:#fafafa;cursor:pointer;font-size:12px;transition:background 0.3s,color 0.3s,border 0.3s;}
+body.dark button,body.dark input,body.dark select{background:#2a2a2a;color:#eee;border:1px solid #666;}
+body.dark select option{background:#2a2a2a;color:#eee;}
+input[type=text],select{box-sizing:border-box;}
 
 /* ---------- Tabla ---------- */
-#tableWrap { flex: 1; overflow: auto; margin: 5px 10px 10px 10px; }
+#tableWrap{flex:1;overflow:auto;margin:5px 10px 10px 10px;position:relative;}
+table{border-collapse:collapse;font-family:monospace;font-size:12px;table-layout:auto;transition:color 0.3s,background 0.3s;}
+th,td{border:1px solid #ddd;padding:4px;text-align:left;white-space:nowrap;position:relative;user-select:none;transition:background 0.2s,color 0.2s;}
+body.dark th,body.dark td{border:1px solid #555;}
+th{position:sticky;top:0;background:#f2f2f2;z-index:2;cursor:pointer;}
+body.dark th{background:#333;color:#eee;}
+th.activeHeader{background:#d9edf7;}
+body.dark th.activeHeader{background:#555;color:#b0c4d0;}
+tr:nth-child(even) td{background:#f9f9f9;}
+tr:nth-child(odd) td{background:#e8f0ff;}
+body.dark tr:nth-child(even) td{background:#2a2a2a;color:#eee;}
+body.dark tr:nth-child(odd) td{background:#262626;color:#eee;}
+tr:hover td{background:#fff2cc;}
+body.dark tr:hover td{background:#444;}
 
-table {
-  border-collapse: collapse;
-  font-family: monospace;
-  font-size: 12px;
-  table-layout: auto;
-}
-
-th, td {
-  border: 1px solid #ddd;
-  padding: 4px;
-  text-align: left;
-  white-space: nowrap;
-  user-select: none;
-}
-
-th { position: sticky; top: 0; background: #f2f2f2; z-index: 2; cursor: pointer; }
-
-tr:nth-child(even) td { background: #fff; }
-tr:nth-child(odd) td { background: #fff; }
-
-tr:hover td { background: #eee; }
+/* ---------- Filtros ---------- */
+.columnFilterContainer{position:relative; display:flex; align-items:center;}
+.columnFilter {width:70px; font-size:11px; padding:2px 18px 2px 4px; margin:2px 4px 0 0;}
+.clearBtn {position:absolute; right:2px; top:50%; transform:translateY(-50%); color:red; cursor:pointer; display:none; font-size:12px; user-select:none;}
+.globalFilterContainer{position:relative; width:30%; margin:5px 10px; display:none;}
+.globalFilter{width:100%; padding:4px 18px 4px 4px; font-size:12px;}
+.globalClearBtn{position:absolute; right:2px; top:50%; transform:translateY(-50%); color:red; cursor:pointer; display:none; font-size:12px; user-select:none;}
 
 /* ---------- Raw ---------- */
-#rawDisplay {
-  display: none;
-  height: auto;
-  min-height: 160px;
-  margin: 5px;
-  padding: 10px;
-  font-family: monospace;
-  font-size: 12px;
-  overflow: auto;
-  border: 1px solid #bbb;
-  white-space: pre;
-  background: #fff;
-  color: #000;
-}
-
-#copyMsg {
-  position: fixed;
-  background: #d9edf7;
-  padding: 6px 10px;
-  border-radius: 6px;
-  color: #000;
-  display: none;
-  z-index: 9999;
-  font-size: 12px;
-  transition: top 0.2s, left 0.2s, opacity 0.2s;
-}
+#rawDisplay{display:none;height:auto;min-height:160px;margin:5px;padding:10px;font-family:monospace;font-size:12px;overflow:auto;border:1px solid #bbb;white-space:pre;background:#fff;color:#000;width:auto;max-width:100%;transition:background 0.3s,color 0.3s;}
+body.dark #rawDisplay{background:#2a2a2a;color:#eee;border:1px solid #666;}
+.blink{background:#fffa8c !important;}
+body.dark .blink{background:#555 !important;}
+#copyMsg{position:fixed;background:#d9edf7;padding:6px 10px;border-radius:6px;color:#000;display:none;z-index:9999;font-size:12px;transition:top 0.2s,left 0.2s,opacity 0.2s;}
+body.dark #copyMsg{background:#444;color:#fff;}
 
 /* ---------- Panel Configuración ---------- */
-#configPanel, #customThemePanel {
-  display: none;
-  position: absolute;
-  top: 40px;
-  right: 10px;
-  background: #fafafa;
-  border: 1px solid #bbb;
-  padding: 10px;
-  border-radius: 6px;
-  z-index: 999;
-  width: 200px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+#configPanel{
+  display:none;
+  position:absolute;
+  top:40px;
+  right:10px;
+  background:#fafafa;
+  border:1px solid #bbb;
+  padding:10px;
+  border-radius:6px;
+  z-index:999;
+  width:200px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.2);
+  transition:background 0.3s,color 0.3s;
 }
-
-#configPanel label, #customThemePanel label { font-size: 12px; }
-#configPanel button, #customThemePanel button { font-size: 12px; padding: 2px 6px; }
-#configPanel input[type=checkbox] { transform: scale(1.1); margin-left: 5px; }
+body.dark #configPanel{
+  background:#2a2a2a;
+  border:1px solid #666;
+  color:#eee;
+}
+#configPanel label{font-size:12px; margin-right:5px;}
+#configPanel button{font-size:12px; padding:2px 6px;}
+#configPanel input[type=checkbox]{transform:scale(1.1); margin-left:5px;}
 </style>
 </head>
 <body>
@@ -134,7 +91,14 @@ tr:hover td { background: #eee; }
     <input type="checkbox" id="autoThemeChk"> Auto-adaptar tema
   </label>
   <button id="openCustomThemeBtn" style="width:100%; margin-top:8px; font-size:12px;">🎨 Tema personalizado</button>
+  <div style="margin-top:8px;">
+    <label style="font-size:12px;">Historial JSON:</label>
+    <select id="jsonHistorySelect" style="width:100%; font-size:12px;">
+      <option value="">-- Seleccionar JSON --</option>
+    </select>
+  </div>
 </div>
+
 
 <!-- ===================== BLOQUE 3.1: Panel Tema Personalizado ===================== -->
 <div id="customThemePanel" style="display:none; position:absolute; top:100px; right:10px; background:#fafafa; border:1px solid #bbb; padding:10px; border-radius:6px; z-index:999; width:220px; box-shadow:0 2px 8px rgba(0,0,0,0.2); transition:background 0.3s,color 0.3s;">
@@ -160,7 +124,8 @@ tr:hover td { background: #eee; }
     <label style="font-size:12px;">Celdas impares:</label>
     <input type="color" id="cellColorOddInput" value="#e8f0ff" style="width:100%;">
   </div>
-  <button id="applyThemeBtn" style="width:100%; padding:4px 0; font-size:12px;">Aplicar Tema</button>
+  <button id="applyThemeBtn" style="width:100%; padding:4px 0; font-size:12px; margin-bottom:4px;">Aplicar Tema</button>
+  <button id="resetThemeBtn" style="width:100%; padding:4px 0; font-size:12px;">Default</button>
 </div>
 
 
@@ -195,10 +160,13 @@ tr:hover td { background: #eee; }
 <div id="copyMsg">Copiado al portapapeles</div>
 
 <!-- ===================== BLOQUE 7: Filtro Global ===================== -->
-<div class="globalFilterContainer">
-  <input class="globalFilter" placeholder="Buscar en toda la tabla..." />
+<div class="globalFilterContainer" style="display:flex; align-items:center; gap:4px;">
+  <input class="globalFilter" placeholder="Buscar en toda la tabla..." style="flex:1;" />
   <span class="globalClearBtn">✕</span>
+  <button id="toggleEditBtn" style="font-size:12px;">✏️ Editar</button>
 </div>
+
+
 
 <!-- ===================== BLOQUE 8: Contenedor de Tabla ===================== -->
 <div id="tableWrap"></div>
@@ -256,61 +224,6 @@ function rowsToCsv(rows,sep){
   for(const r of rows) lines.push(headers.map(h=>esc(r[h])).join(sep));
   return lines.join('\n');
 }
-
-// ===================== Historial de JSONs =====================
-const HISTORIAL_KEY = 'jsonHistory';
-const MAX_HISTORY = 100;
-
-// Obtener historial
-function getJsonHistory() {
-  return JSON.parse(localStorage.getItem(HISTORIAL_KEY) || '[]');
-}
-
-// Guardar un nuevo JSON en historial
-function addJsonToHistory(jsonStr) {
-  let history = getJsonHistory();
-  // Evitar duplicados exactos
-  history = history.filter(item => item !== jsonStr);
-  history.unshift(jsonStr); // agregar al inicio
-  if(history.length > MAX_HISTORY) history = history.slice(0, MAX_HISTORY);
-  localStorage.setItem(HISTORIAL_KEY, JSON.stringify(history));
-  renderJsonHistory();
-}
-
-// Renderizar historial en panel de configuración
-function renderJsonHistory() {
-  const panel = document.getElementById('configPanel');
-  let select = document.getElementById('jsonHistorySelect');
-  if(!select) {
-    select = document.createElement('select');
-    select.id = 'jsonHistorySelect';
-    select.style.width = '100%';
-    select.style.marginTop = '8px';
-    select.style.fontSize = '12px';
-    panel.appendChild(select);
-
-    // Cargar JSON al seleccionar
-    select.addEventListener('change', () => {
-      const val = select.value;
-      if(val) {
-        jsonin.value = val;
-        updateTableFromJson(val);
-      }
-    });
-  }
-
-  const history = getJsonHistory();
-  select.innerHTML = '';
-  select.appendChild(new Option('Selecciona un JSON del historial', ''));
-  history.forEach((item, idx) => {
-    const preview = item.length > 30 ? item.slice(0,30).replace(/\n/g,' ')+'...' : item;
-    select.appendChild(new Option(preview, item));
-  });
-}
-
-// Cargar historial al iniciar
-renderJsonHistory();
-
 
 // ===================== BLOQUE 9.3: Configuración y Tema =====================
 const savedTheme = localStorage.getItem('theme');
@@ -426,30 +339,6 @@ function updateHeaderArrows(tbl){
 }
 
 /* ===================== BLOQUE 9.5: Renderizado filtrado y ordenamiento ===================== */
-let tableEditable = false; // variable global para activar/desactivar edición
-
-// Botón general de edición junto al filtro global
-const editToggleBtn = document.createElement('span');
-editToggleBtn.textContent = '✏️';
-editToggleBtn.style.cursor = 'pointer';
-editToggleBtn.style.marginLeft = '6px';
-editToggleBtn.title = 'Activar/Desactivar edición de tabla';
-document.querySelector('.globalFilterContainer').appendChild(editToggleBtn);
-
-editToggleBtn.addEventListener('click', () => {
-  tableEditable = !tableEditable;
-  editToggleBtn.textContent = tableEditable ? '✅' : '✏️';
-  const tbl = tableWrap.querySelector('table');
-  if(tbl){
-    Array.from(tbl.tBodies[0].rows).forEach(tr=>{
-      Array.from(tr.cells).forEach(td=>{
-        td.contentEditable = tableEditable;
-        td.style.background = tableEditable ? '#fffa8c' : '#fff';
-      });
-    });
-  }
-});
-
 function renderFilteredAndSorted(){
   let filtered = currentRows.slice();
   const tbl = tableWrap.querySelector('table');
@@ -477,24 +366,18 @@ function renderFilteredAndSorted(){
     });
   }
 
-  filtered.forEach((r,i)=>{
+  filtered.forEach((r, i)=>{
     const tr = tbody.insertRow();
+    const baseColor = i%2===0 ? (theme==='dark'?'#2a2a2a':'#f9f9f9') : (theme==='dark'?'#262626':'#e8f0ff');
     currentHeaders.forEach(h=>{
       const td = tr.insertCell();
       let val = r[h];
       if(typeof val==='object') val = JSON.stringify(val);
       td.textContent = val??'';
-      td.contentEditable = tableEditable;
-      td.spellcheck = false;
-      td.style.background = tableEditable ? '#fffa8c' : '#fff';
-      td.addEventListener('input', ()=>{
-        currentRows[i][h] = !isNaN(td.textContent) ? Number(td.textContent) : td.textContent;
-        if(showRaw) updateRawDisplay();
-      });
+      td.style.background = baseColor;
     });
-
-    tr.addEventListener('mouseenter', ()=>Array.from(tr.cells).forEach(td=>td.style.background = tableEditable ? '#fffa8c' : '#eee'));
-    tr.addEventListener('mouseleave', ()=>Array.from(tr.cells).forEach(td=>td.style.background = tableEditable ? '#fffa8c' : '#fff'));
+    tr.addEventListener('mouseenter', ()=>Array.from(tr.cells).forEach(td=>td.style.background = theme==='dark'?'#444':'#fff2cc'));
+    tr.addEventListener('mouseleave', ()=>Array.from(tr.cells).forEach(td=>td.style.background = baseColor));
   });
 
   globalFilterContainer.style.display = currentRows.length && !showRaw ? 'block':'none';
@@ -508,9 +391,8 @@ function updateTableFromJson(raw){
     globalFilterContainer.style.display='none';
     return;
   }
-
   try{
-    const parsed = JSON.parse(raw);
+    const parsed=JSON.parse(raw);
     currentRows=getRowsFromJson(parsed);
     currentHeaders=Array.from(currentRows.reduce((s,r)=>{Object.keys(r).forEach(k=>s.add(k)); return s;}, new Set()));
     sortState={};
@@ -520,10 +402,6 @@ function updateTableFromJson(raw){
 
     renderTable(); renderFilteredAndSorted();
     toggleRawBtn.disabled=false; copyBtn.disabled=false; downloadSelect.disabled=false;
-
-    // ✅ Guardar en historial
-    addJsonToHistory(raw);
-
   }catch(e){
     tableWrap.innerText='JSON inválido';
     toggleRawBtn.disabled=true; copyBtn.disabled=true; downloadSelect.disabled=true;
@@ -612,6 +490,159 @@ downloadSelect.addEventListener('change', () => {
   downloadSelect.value = '';
 });
 
+<!-- ===================== BLOQUE 9.10/9.11: Tema Personalizado, Edición y Historial ===================== -->
+
+/* ----- Variables Tema Personalizado ----- */
+const resetThemeBtn = document.getElementById('resetThemeBtn');
+let customTheme = JSON.parse(localStorage.getItem('customTheme') || '{}');
+
+/* Cargar tema personalizado */
+function loadCustomTheme() {
+  if(customTheme.bg) document.body.style.background = customTheme.bg;
+  if(customTheme.text) document.body.style.color = customTheme.text;
+  if(customTheme.font) document.body.style.fontFamily = customTheme.font;
+  if(customTheme.cellEven) window.cellEvenColor = customTheme.cellEven;
+  if(customTheme.cellOdd) window.cellOddColor = customTheme.cellOdd;
+}
+loadCustomTheme();
+
+/* Aplicar cambios del tema personalizado */
+function applyCustomTheme() {
+  customTheme = {
+    bg: bgColorInput.value,
+    text: textColorInput.value,
+    font: fontInput.value,
+    cellEven: cellColorEvenInput.value,
+    cellOdd: cellColorOddInput.value
+  };
+  localStorage.setItem('customTheme', JSON.stringify(customTheme));
+  loadCustomTheme();
+  renderFilteredAndSorted();
+}
+applyThemeBtn.addEventListener('click', applyCustomTheme);
+
+/* Resetear al tema original */
+resetThemeBtn.addEventListener('click', () => {
+  customTheme = {};
+  localStorage.removeItem('customTheme');
+  document.body.style.background = '';
+  document.body.style.color = '';
+  document.body.style.fontFamily = '';
+  renderFilteredAndSorted();
+});
+
+/* Cerrar panel de tema personalizado cuando se cierra configuración */
+configBtn.addEventListener('click', () => {
+  if(configPanel.style.display === 'block'){
+    // Si se estaba abriendo, solo mostramos configPanel
+    configPanel.style.display = 'block';
+  } else {
+    // Si se estaba cerrando, ocultamos también tema personalizado
+    customThemePanel.style.display = 'none';
+  }
+});
+
+/* ----- Hook para colorear filas con tema personalizado ----- */
+const originalRender = renderFilteredAndSorted;
+renderFilteredAndSorted = function() {
+  originalRender();
+  const tbl = tableWrap.querySelector('table');
+  if(!tbl) return;
+  Array.from(tbl.tBodies[0].rows).forEach((tr,i)=>{
+    const baseColor = i%2===0 ? (customTheme.cellEven || (theme==='dark'?'#2a2a2a':'#f9f9f9'))
+                               : (customTheme.cellOdd || (theme==='dark'?'#262626':'#e8f0ff'));
+    Array.from(tr.cells).forEach(td=>td.style.background = baseColor);
+  });
+};
+
+/* ----- Botón Editar Tabla ----- */
+const toggleEditBtn = document.getElementById('toggleEditBtn');
+let editMode = false;
+
+toggleEditBtn.addEventListener('click', () => {
+  editMode = !editMode;
+  const tbl = tableWrap.querySelector('table');
+  if(!tbl) return;
+  Array.from(tbl.tBodies[0].rows).forEach(tr => {
+    Array.from(tr.cells).forEach(td => {
+      td.contentEditable = editMode;
+      td.style.outline = editMode ? '1px solid orange' : '';
+    });
+  });
+  toggleEditBtn.textContent = editMode ? '💾 Guardar' : '✏️ Editar';
+  if(!editMode) {
+    // Guardar cambios de vuelta al JSON
+    currentRows.forEach((r,i) => {
+      currentHeaders.forEach((h,j) => {
+        r[h] = tbl.tBodies[0].rows[i].cells[j].textContent;
+      });
+    });
+    // Actualizar textarea con la versión editada
+    jsonin.value = JSON.stringify(currentRows, null, 2);
+    // Actualizar raw si se está mostrando
+    if(showRaw) updateRawDisplay();
+    renderFilteredAndSorted();
+  }
+});
+
+/* ----- Cerrar paneles al hacer clic fuera ----- */
+document.addEventListener('click', e => {
+  if(!configPanel.contains(e.target) && !configBtn.contains(e.target)){
+    configPanel.style.display = 'none';
+  }
+  if(!customThemePanel.contains(e.target) && !openCustomThemeBtn.contains(e.target)){
+    customThemePanel.style.display = 'none';
+  }
+});
+
+/* ----- Historial JSON solo para JSON originales ----- */
+const jsonHistorySelect = document.getElementById('jsonHistorySelect');
+let jsonHistory = JSON.parse(localStorage.getItem('jsonHistory') || '[]');
+
+function addToHistory(jsonText) {
+  if(!jsonText.trim()) return;
+  if(jsonHistory.includes(jsonText)) return;
+  jsonHistory.unshift(jsonText);
+  if(jsonHistory.length>100) jsonHistory.pop();
+  localStorage.setItem('jsonHistory', JSON.stringify(jsonHistory));
+  renderHistory();
+}
+
+function renderHistory() {
+  jsonHistorySelect.innerHTML = '<option value="">-- Seleccionar JSON --</option>';
+  jsonHistory.forEach((j, idx) => {
+    const opt = document.createElement('option');
+    opt.value = idx;
+    opt.textContent = j.slice(0,50).replace(/\n/g,' ') + (j.length>50?'...':'');
+    jsonHistorySelect.appendChild(opt);
+  });
+}
+renderHistory();
+
+jsonHistorySelect.addEventListener('change', () => {
+  const idx = jsonHistorySelect.value;
+  if(idx==='') return;
+  const selectedJson = jsonHistory[idx];
+  jsonin.value = selectedJson;
+  updateTableFromJson(selectedJson, {original:true});
+});
+
+/* ----- Sobrescribir updateTableFromJson para historial solo de JSON originales y último JSON ----- */
+const originalUpdate = updateTableFromJson;
+updateTableFromJson = function(raw, {original=true}={}) {
+  originalUpdate(raw);
+  if(original && !showRaw) {
+    addToHistory(raw);
+    localStorage.setItem('lastJson', raw); // Guardamos también el último JSON
+  }
+};
+
+/* ----- Restaurar último JSON al abrir la página ----- */
+const lastJson = localStorage.getItem('lastJson');
+if(lastJson) {
+  jsonin.value = lastJson;
+  updateTableFromJson(lastJson, {original:true});
+}
 
 </script>
 </body>
