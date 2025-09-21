@@ -2,301 +2,308 @@
 <html lang="es">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>JSON → Tabla Mejorada</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>JSON → Tabla Mejorada (Móvil Friendly)</title>
 
-<!-- ===================== BLOQUE 1: CSS ===================== -->
 <style>
 :root {
   --bg-color: #fff;
   --text-color: #000;
   --cell-even: #f9f9f9;
-  --cell-odd: #fff;
-  --header-bg: #e0e0e0;
-  --filter-bg: #f0f0f0;
-  --highlight-color: #ffff99;
+  --cell-odd: #e8f0ff;
+  --header-bg: #f2f2f2;
+  --header-color: #111;
 }
+body.dark {
+  --bg-color: #1e1e1e;
+  --text-color: #eee;
+  --cell-even: #2a2a2a;
+  --cell-odd: #262626;
+  --header-bg: #333;
+  --header-color: #eee;
+}
+* { box-sizing: border-box; }
 body {
-  font-family: system-ui,Segoe UI,Roboto,Arial,sans-serif;
-  background: var(--bg-color);
-  color: var(--text-color);
-  margin:0; padding:0;
+  font-family: system-ui, Segoe UI, Roboto, Arial, sans-serif;
+  margin: 0; color: var(--text-color); background: var(--bg-color);
+  display: flex; flex-direction: column; min-height: 100vh; transition: background 0.3s, color 0.3s;
 }
-#container {padding:15px; max-width:1200px; margin:auto;}
-h1{margin-bottom:10px;font-size:1.5em;}
-textarea,input,select,button{margin:2px 0; padding:5px; font-size:0.9em; font-family:inherit;}
-table {border-collapse: collapse; width:100%; margin-top:10px;}
-th,td {border:1px solid #ccc; padding:5px; text-align:left;}
-th {background: var(--header-bg); cursor:pointer;}
-tr:nth-child(even){background: var(--cell-even);}
-tr:nth-child(odd){background: var(--cell-odd);}
-.blink{animation:blink-bg 0.3s ease 0s 1;}
-@keyframes blink-bg{from{background:var(--highlight-color);}to{background:inherit;}}
-.columnFilter{width:100%;}
-.clearBtn{cursor:pointer;color:red;font-weight:bold;}
-#rawDisplay{white-space:pre; background:#eee; padding:10px; display:none; margin-top:10px; overflow:auto; max-height:300px;}
-#copyMsg{position:absolute; top:10px; right:10px; background:#0f0; color:#000; padding:5px 10px; display:none; border-radius:4px;}
+textarea#jsonin { width: 100%; height: 140px; font-family: monospace; padding: 10px; font-size: 14px; background: #fff; color: #000; transition: background 0.3s, color 0.3s; border-radius:6px; }
+body.dark textarea#jsonin { background: #2a2a2a; color: #eee; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; margin: 5px 10px; align-items: center; }
+button, input, select { padding: 6px 12px; border-radius: 6px; border: 1px solid #bbb; background: #fafafa; cursor: pointer; font-size: 14px; transition: background 0.3s, color 0.3s, border 0.3s; }
+body.dark button, body.dark input, body.dark select { background: #2a2a2a; color: #eee; border: 1px solid #666; }
+input[type=text], select { flex:1; min-width: 120px; }
+#tableWrap { flex: 1; overflow: auto; margin: 5px 10px 10px 10px; position: relative; max-height: 60vh; }
+table { border-collapse: collapse; font-family: monospace; font-size: 12px; width: 100%; min-width: 600px; }
+th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; white-space: nowrap; }
+th { position: sticky; top: 0; background: var(--header-bg); color: var(--header-color); z-index:2; cursor: pointer; }
+tr:nth-child(even) td { background: var(--cell-even); }
+tr:nth-child(odd) td { background: var(--cell-odd); }
+tr:hover td { background: #fff2cc; }
+.columnFilterContainer { display: flex; align-items: center; }
+.columnFilter { width: 60px; font-size: 12px; padding: 2px 4px; margin: 0 2px 0 0; }
+.clearBtn { color:red; cursor:pointer; display:none; font-size:12px; user-select:none; }
+.globalFilterContainer { display:flex; align-items:center; flex-wrap:wrap; gap:4px; margin:5px 10px; }
+.globalFilter { flex:1; min-width:140px; padding:4px 8px; font-size:14px; border-radius:6px; }
+.globalClearBtn { cursor:pointer; font-size:14px; color:red; user-select:none; display:inline-block; margin-left:4px; }
+#rawDisplay { display:none; height:160px; margin:5px 10px; padding:10px; font-family:monospace; font-size:12px; overflow:auto; border:1px solid #bbb; border-radius:6px; background:#fff; color:#000; white-space:pre; }
+body.dark #rawDisplay { background:#2a2a2a; color:#eee; border:1px solid #666; }
+.blink { background:#fffa8c !important; }
+#copyMsg { position: fixed; background: #d9edf7; padding:6px 10px; border-radius:6px; color:#000; display:none; z-index:9999; font-size:12px; top:10px; left:10px; }
+body.dark #copyMsg { background:#444; color:#fff; }
+#configPanel { display:none; position:absolute; top:40px; right:10px; background:#fafafa; border:1px solid #bbb; padding:10px; border-radius:6px; z-index:999; width:200px; box-shadow:0 2px 8px rgba(0,0,0,0.2); }
+body.dark #configPanel { background:#2a2a2a; border:1px solid #666; color:#eee; }
+#configPanel label { font-size:12px; margin-right:5px; }
+#toggleEditBtn { font-size:14px; padding:4px 8px; margin-left:4px; }
+@media(max-width:600px){
+  textarea#jsonin { font-size:12px; height:120px; }
+  button, input, select { font-size:12px; padding:4px 8px; }
+  table { font-size:11px; min-width:500px; }
+  #tableWrap { max-height:50vh; }
+}
 </style>
 
-<!-- ===================== BLOQUE 2: HTML ESTRUCTURA ===================== -->
-</head>
-<body>
-<div id="container">
-  <h1>JSON → Tabla Mejorada</h1>
-  
-  <!-- Configuración -->
-  <div id="config">
-    <label>Separador: <select id="separatorSelect"><option value=",">,</option><option value=";">;</option><option value="\\t">TAB</option></select></label>
-    <label>Descargar: <select id="downloadSelect"><option value="">Formato...</option><option value="csv">CSV</option><option value="txt">TXT</option><option value="xlsx">XLSX</option></select></label>
-    <button id="copyBtn">Copiar al portapapeles</button>
-    <button id="clearBtn">Limpiar</button>
-    <button id="toggleRawBtn">Mostrar Raw JSON</button>
-    <button id="toggleEditBtn">Toggle Edición</button>
-    <input type="text" id="globalFilter" placeholder="🔍 Filtro global">
-    <button id="globalClearBtn">✕</button>
-    <span id="copyMsg">Copiado!</span>
-  </div>
-
-  <!-- JSON input -->
-  <textarea id="jsonin" rows="10" style="width:100%;" placeholder='Pega aquí tu JSON'></textarea>
-
-  <!-- URL fetch -->
-  <div>
-    <input type="text" id="urlIn" placeholder="URL JSON">
-    <button id="fetchBtn">Cargar JSON</button>
-  </div>
-
-  <!-- Tabla -->
-  <div id="tableWrap"></div>
-
-  <!-- Raw JSON -->
-  <pre id="rawDisplay"></pre>
+<!-- ===================== BLOQUE 2: HTML ===================== -->
+<div class="row">
+  <input type="text" id="urlIn" placeholder="Pega URL aquí..." />
+  <button id="fetchBtn">📡 Cargar URL</button>
+  <button id="configBtn">⚙️ Config</button>
 </div>
 
-<!-- ===================== BLOQUE 3: Librerías ===================== -->
+<div class="row">
+  <textarea id="jsonin" placeholder='Pega JSON aquí'></textarea>
+</div>
+
+<div id="configPanel"></div>
+
+<div class="row">
+  <button id="clearBtn">Limpiar JSON</button>
+</div>
+
+<div class="row">
+  <label>Separador:</label>
+  <select id="separatorSelect">
+    <option value="	">Tab</option>
+    <option value=";">;</option>
+    <option value=",">,</option>
+  </select>
+
+  <select id="downloadSelect">
+    <option value="">Descargar...</option>
+    <option value="csv">CSV</option>
+    <option value="xlsx">XLSX</option>
+    <option value="txt">TXT</option>
+  </select>
+
+  <button id="toggleRawBtn">Mostrar Raw</button>
+  <button id="copyBtn">Copiar tabla</button>
+</div>
+
+<div class="globalFilterContainer">
+  <input id="globalFilter" class="globalFilter" placeholder="Buscar en toda la tabla..." />
+  <span id="globalClearBtn" class="globalClearBtn">✕</span>
+  <button id="toggleEditBtn">✏️ Editar</button>
+  <select id="jsonHistorySelect">
+    <option value="">-- Seleccionar JSON --</option>
+  </select>
+</div>
+
+<textarea id="rawDisplay" readonly></textarea>
+<div id="copyMsg">Copiado al portapapeles</div>
+<div id="tableWrap"></div>
+
+<!-- ===================== BLOQUE 3: JS ===================== -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
-<!-- ===================== BLOQUE 4: Funciones JS ===================== -->
 <script>
-const jsonin = document.getElementById('jsonin');
-const tableWrap = document.getElementById('tableWrap');
-const downloadSelect = document.getElementById('downloadSelect');
-const copyBtn = document.getElementById('copyBtn');
-const clearBtn = document.getElementById('clearBtn');
-const urlIn = document.getElementById('urlIn');
-const fetchBtn = document.getElementById('fetchBtn');
-const separatorSelect = document.getElementById('separatorSelect');
-const globalFilter = document.getElementById('globalFilter');
-const globalClearBtn = document.getElementById('globalClearBtn');
-const toggleRawBtn = document.getElementById('toggleRawBtn');
-const rawDisplay = document.getElementById('rawDisplay');
-const copyMsg = document.getElementById('copyMsg');
-const toggleEditBtn = document.getElementById('toggleEditBtn');
+document.addEventListener('DOMContentLoaded', ()=>{
+  const jsonin=document.getElementById('jsonin');
+  const tableWrap=document.getElementById('tableWrap');
+  const downloadSelect=document.getElementById('downloadSelect');
+  const copyBtn=document.getElementById('copyBtn');
+  const clearBtn=document.getElementById('clearBtn');
+  const urlIn=document.getElementById('urlIn');
+  const fetchBtn=document.getElementById('fetchBtn');
+  const separatorSelect=document.getElementById('separatorSelect');
+  const globalFilter=document.getElementById('globalFilter');
+  const globalClearBtn=document.getElementById('globalClearBtn');
+  const toggleRawBtn=document.getElementById('toggleRawBtn');
+  const rawDisplay=document.getElementById('rawDisplay');
+  const toggleEditBtn=document.getElementById('toggleEditBtn');
+  const jsonHistorySelect=document.getElementById('jsonHistorySelect');
+  const configBtn=document.getElementById('configBtn');
+  const configPanel=document.getElementById('configPanel');
 
-let currentRows = [], currentHeaders = [], sortState = {}, showRaw = false, editing = false;
-let lastJson = null;
+  window.currentRows=[];
+  let currentHeaders=[], sortState={}, showRaw=false, editing=false;
+  let lastJson=null;
+  let jsonHistory = JSON.parse(localStorage.getItem('jsonHistory')||'[]');
 
-function isObj(x){ return x && typeof x==='object' && !Array.isArray(x); }
-function flattenObject(obj, prefix='', out={}){
-  if(Array.isArray(obj)){ out[prefix.slice(0,-1)||'array'] = JSON.stringify(obj); return out; }
-  for(const k of Object.keys(obj||{})){
-    const v = obj[k], key = prefix + k + '.';
-    if(isObj(v)) flattenObject(v,key,out);
-    else if(Array.isArray(v)) out[key.slice(0,-1)] = JSON.stringify(v);
-    else out[key.slice(0,-1)] = v;
+  function isObj(x){ return x && typeof x==='object' && !Array.isArray(x); }
+  function flattenObject(obj,prefix='',out={}) {
+    if(Array.isArray(obj)){ out[prefix.slice(0,-1)||'array']=JSON.stringify(obj); return out; }
+    for(const k of Object.keys(obj||{})){
+      const v=obj[k], key=prefix+k+'.';
+      if(isObj(v)) flattenObject(v,key,out);
+      else if(Array.isArray(v)) out[key.slice(0,-1)] = JSON.stringify(v);
+      else out[key.slice(0,-1)] = v;
+    }
+    return out;
   }
-  return out;
-}
-function getRowsFromJson(parsed){
-  if(Array.isArray(parsed)) return parsed.map(o => flattenObject(o));
-  for(const k of Object.keys(parsed)){
-    if(Array.isArray(parsed[k])) return parsed[k].map(o=>flattenObject(o));
+  function getRowsFromJson(parsed){
+    if(Array.isArray(parsed)) return parsed.map(o => flattenObject(o));
+    for(const k of Object.keys(parsed)){ if(Array.isArray(parsed[k])) return parsed[k].map(o=>flattenObject(o)); }
+    return [flattenObject(parsed)];
   }
-  return [flattenObject(parsed)];
-}
-function escapeForRegex(s){ return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
-function rowsToCsv(rows, sep){
-  if(!rows || !rows.length) return '';
-  const allKeys = new Set();
-  rows.forEach(r=>Object.keys(r).forEach(k=>allKeys.add(k)));
-  const headers = Array.from(allKeys);
-  const actualSep = sep==='\\t'?'\t':sep;
-  const esc = v=>{
-    if(v==null) return '';
-    const s=String(v);
-    if(new RegExp('["\\n'+escapeForRegex(actualSep)+']').test(s) || s.includes('\r')) return '"'+s.replace(/"/g,'""')+'"';
-    return s;
-  };
-  const lines = [headers.join(actualSep)];
-  for(const r of rows) lines.push(headers.map(h=>esc(r[h])).join(actualSep));
-  return lines.join('\n');
-}
-function updateDownloadCopyButtons(enabled){
-  copyBtn.disabled = !enabled;
-  downloadSelect.disabled = !enabled;
-}
-function parseJsonInput(){
-  let parsed;
-  try { parsed = JSON.parse(jsonin.value); }
-  catch(e){ updateDownloadCopyButtons(false); toggleRawBtn.disabled=true; tableWrap.innerHTML=''; return; }
-  lastJson = parsed;
-  currentRows = getRowsFromJson(parsed);
-  const allKeys = new Set();
-  currentRows.forEach(r=>Object.keys(r).forEach(k=>allKeys.add(k)));
-  currentHeaders = Array.from(allKeys);
-  renderTable();
-  const hasRows = currentRows.length>0;
-  updateDownloadCopyButtons(hasRows);
-  toggleRawBtn.disabled = !hasRows;
-  if(hasRows) localStorage.setItem('lastJson', jsonin.value);
-}
-(function loadLastJson(){
-  const savedJson = localStorage.getItem('lastJson');
-  if(savedJson){ jsonin.value=savedJson; parseJsonInput(); }
-})();
-function renderFilteredTbody(rows, highlightCol=null){
-  const tbody = tableWrap.querySelector('tbody');
-  if(!tbody) return;
-  tbody.innerHTML='';
-  const headers = currentHeaders || [];
-  rows.forEach(r=>{
-    const tr=document.createElement('tr');
-    headers.forEach(h=>{
-      const td=document.createElement('td');
-      td.textContent = r[h]!==undefined?r[h]:'';
-      tr.appendChild(td);
-    });
-    tbody.appendChild(tr);
-  });
-  if(highlightCol){
-    const idx = headers.indexOf(highlightCol);
-    if(idx>=0){
-      tbody.querySelectorAll('tr').forEach(tr=>{
-        const td = tr.children[idx];
-        if(td){ td.classList.add('blink'); setTimeout(()=>td.classList.remove('blink'),150); }
+  function escRegex(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+  function rowsToCsv(rows, sep){
+    if(!rows || !rows.length) return '';
+    const allKeys = new Set();
+    rows.forEach(r=>Object.keys(r).forEach(k=>allKeys.add(k)));
+    const headers = Array.from(allKeys);
+    const actualSep = sep==='\\t'?'\t':sep;
+    const esc = v=>{
+      if(v==null) return '';
+      const s=String(v);
+      if(new RegExp('["\\n'+escRegex(actualSep)+']').test(s) || s.includes('\r')) return '"'+s.replace(/"/g,'""')+'"';
+      return s;
+    };
+    const lines=[headers.join(actualSep)];
+    for(const r of rows) lines.push(headers.map(h=>esc(r[h])).join(actualSep));
+    return lines.join('\n');
+  }
+
+  function parseJsonInput(){
+    let parsed;
+    try { parsed = JSON.parse(jsonin.value); }
+    catch(e){ tableWrap.innerHTML=''; toggleRawBtn.disabled=true; downloadSelect.disabled=true; copyBtn.disabled=true; return; }
+    lastJson = parsed;
+    window.currentRows = getRowsFromJson(parsed);
+    const allKeys = new Set(); window.currentRows.forEach(r=>Object.keys(r).forEach(k=>allKeys.add(k))); currentHeaders = Array.from(allKeys);
+    renderTable();
+    const hasRows = window.currentRows.length>0;
+    toggleRawBtn.disabled = !hasRows;
+    updateDownloadCopyButtons(hasRows);
+    if(hasRows) addToHistory(jsonin.value);
+    if(hasRows) localStorage.setItem('lastJson', jsonin.value);
+  }
+
+  function updateDownloadCopyButtons(enabled){ copyBtn.disabled=!enabled; downloadSelect.disabled=!enabled; }
+
+  function renderFilteredTbody(rows, highlightCol=null){
+    const tbody = tableWrap.querySelector('tbody');
+    if(!tbody) return;
+    tbody.innerHTML='';
+    const headers = currentHeaders || [];
+    rows.forEach(r=>{
+      const tr=document.createElement('tr');
+      headers.forEach(h=>{
+        const td=document.createElement('td'); td.textContent = r[h]!==undefined?r[h]:''; tr.appendChild(td);
       });
+      tbody.appendChild(tr);
+    });
+    if(highlightCol){
+      const idx = headers.indexOf(highlightCol);
+      if(idx>=0){
+        tbody.querySelectorAll('tr').forEach(tr=>{
+          const td=tr.children[idx];
+          if(td){ td.classList.add('blink'); setTimeout(()=>td.classList.remove('blink'),150); }
+        });
+      }
     }
   }
-}
-function renderTable(){
-  tableWrap.innerHTML='';
-  if(!currentRows.length){ updateDownloadCopyButtons(false); return; }
-  const tbl=document.createElement('table');
-  const thead=document.createElement('thead');
-  const trh=document.createElement('tr');
-  currentHeaders.forEach(h=>{
-    const th=document.createElement('th');
-    th.textContent=h; th.style.position='relative'; th.style.minWidth='80px';
-    th.addEventListener('click', ()=>sortColumn(h));
-    trh.appendChild(th);
-  });
-  thead.appendChild(trh);
-  const trFilters=document.createElement('tr');
-  currentHeaders.forEach(h=>{
-    const th=document.createElement('th'); th.style.padding='2px'; th.style.position='relative'; th.style.minWidth='80px';
-    const inputContainer=document.createElement('div');
-    inputContainer.style.display='flex'; inputContainer.style.alignItems='center'; inputContainer.style.justifyContent='space-between';
-    const input=document.createElement('input'); input.type='text'; input.placeholder='🔍'; input.className='columnFilter';
-    input.style.flex='1'; input.style.fontSize='11px'; input.style.padding='2px 4px'; input.style.boxSizing='border-box'; input.style.cursor='text';
-    const clearX=document.createElement('span'); clearX.textContent='✕'; clearX.className='clearBtn'; clearX.style.display='none';
-    clearX.style.cursor='pointer'; clearX.style.marginLeft='4px'; clearX.style.flex='0 0 auto';
-    input.addEventListener('input',()=>{
-      const val=input.value.toLowerCase();
-      const filtered=currentRows.filter(r=>r[h]!==undefined && String(r[h]).toLowerCase().includes(val));
-      renderFilteredTbody(filtered,h);
-      clearX.style.display = val?'inline':'none';
+
+  function renderTable(){
+    tableWrap.innerHTML=''; if(!window.currentRows.length){ updateDownloadCopyButtons(false); return; }
+    const tbl=document.createElement('table'); const thead=document.createElement('thead');
+    const trh=document.createElement('tr');
+    currentHeaders.forEach(h=>{
+      const th=document.createElement('th'); th.textContent=h; th.style.minWidth='80px';
+      th.addEventListener('click', ()=>sortColumn(h)); trh.appendChild(th);
     });
-    clearX.addEventListener('click', ()=>{
-      input.value=''; input.focus(); clearX.style.display='none'; renderFilteredTbody(currentRows);
+    thead.appendChild(trh);
+    // Filtros por columna
+    const trFilters=document.createElement('tr');
+    currentHeaders.forEach(h=>{
+      const th=document.createElement('th'); th.style.padding='2px'; th.style.minWidth='80px';
+      const inputContainer=document.createElement('div'); inputContainer.style.display='flex'; inputContainer.style.alignItems='center'; inputContainer.style.justifyContent='space-between';
+      const input=document.createElement('input'); input.type='text'; input.placeholder='🔍'; input.className='columnFilter';
+      input.style.flex='1'; input.style.fontSize='11px'; input.style.padding='2px 4px'; input.style.boxSizing='border-box'; input.style.cursor='text';
+      const clearX=document.createElement('span'); clearX.textContent='✕'; clearX.className='clearBtn'; clearX.style.display='none';
+      clearX.style.cursor='pointer'; clearX.style.marginLeft='4px'; clearX.style.flex='0 0 auto';
+      input.addEventListener('input',()=>{ const val=input.value.toLowerCase(); const filtered=window.currentRows.filter(r=>r[h]!==undefined && String(r[h]).toLowerCase().includes(val)); renderFilteredTbody(filtered,h); clearX.style.display = val?'inline':'none'; });
+      clearX.addEventListener('click',()=>{ input.value=''; input.focus(); clearX.style.display='none'; renderFilteredTbody(window.currentRows); });
+      inputContainer.appendChild(input); inputContainer.appendChild(clearX); th.appendChild(inputContainer); trFilters.appendChild(th);
     });
-    inputContainer.appendChild(input); inputContainer.appendChild(clearX); th.appendChild(inputContainer); trFilters.appendChild(th);
+    thead.appendChild(trFilters); tbl.appendChild(thead); tbl.appendChild(document.createElement('tbody')); tableWrap.appendChild(tbl);
+    renderFilteredTbody(window.currentRows);
+  }
+
+  function sortColumn(header){
+    const dir = sortState[header]==='asc'?'desc':'asc'; sortState[header]=dir;
+    window.currentRows.sort((a,b)=>{
+      const va=a[header]??''; const vb=b[header]??''; if(va===vb) return 0;
+      if(dir==='asc') return va>vb?1:-1; else return va>vb?-1:1;
+    });
+    renderTable();
+  }
+
+  function addToHistory(jsonStr){
+    if(jsonHistory.includes(jsonStr)) return;
+    jsonHistory.unshift(jsonStr);
+    if(jsonHistory.length>20) jsonHistory.pop();
+    localStorage.setItem('jsonHistory', JSON.stringify(jsonHistory));
+    updateHistorySelect();
+  }
+
+  function updateHistorySelect(){
+    jsonHistorySelect.innerHTML='<option value="">-- Seleccionar JSON --</option>';
+    jsonHistory.forEach((j,i)=>{ const opt=document.createElement('option'); opt.value=i; opt.textContent='JSON '+(i+1); jsonHistorySelect.appendChild(opt); });
+  }
+
+  function showRawData(){ rawDisplay.style.display=showRaw?'block':'none'; if(showRaw) rawDisplay.value=rowsToCsv(window.currentRows, separatorSelect.value); }
+
+  // Eventos
+  jsonin.addEventListener('input', parseJsonInput);
+  clearBtn.addEventListener('click',()=>{ jsonin.value=''; parseJsonInput(); });
+  fetchBtn.addEventListener('click',()=>{
+    if(!urlIn.value) return;
+    fetch(urlIn.value).then(r=>r.json()).then(data=>{ jsonin.value=JSON.stringify(data,null,2); parseJsonInput(); }).catch(console.error);
   });
-  thead.appendChild(trFilters);
-  tbl.appendChild(thead);
-  tbl.appendChild(document.createElement('tbody'));
-  tableWrap.appendChild(tbl);
-  renderFilteredTbody(currentRows);
-  const hasRows = currentRows.length>0;
-  updateDownloadCopyButtons(hasRows);
-  toggleRawBtn.disabled = !hasRows;
-}
-function sortColumn(header){
-  const dir = sortState[header]==='asc'?'desc':'asc';
-  sortState[header] = dir;
-  currentRows.sort((a,b)=>{
-    const va=a[header], vb=b[header];
-    if(va==null) return 1; if(vb==null) return -1;
-    if(!isNaN(va) && !isNaN(vb)) return dir==='asc'?va-vb:vb-va;
-    return dir==='asc'?String(va).localeCompare(String(vb)):String(vb).localeCompare(String(va));
-  });
-  renderFilteredTbody(currentRows, header);
-}
-document.addEventListener('DOMContentLoaded', ()=>{
-  jsonin.addEventListener('input', ()=>parseJsonInput());
-  fetchBtn.addEventListener('click', async ()=>{
-    const url = urlIn.value.trim();
-    if(!url) return;
-    try{
-      const resp = await fetch(url);
-      const text = await resp.text();
-      try{ jsonin.value = JSON.stringify(JSON.parse(text), null, 2); } catch(e){ jsonin.value = text; }
-      parseJsonInput();
-    } catch(e){ console.warn('Fetch falló', e); }
-  });
-  clearBtn.addEventListener('click', ()=>{
-    jsonin.value=''; currentRows=[]; currentHeaders=[]; renderTable();
-    updateDownloadCopyButtons(false); toggleRawBtn.disabled=true; copyBtn.disabled=true; rawDisplay.style.display='none';
-  });
-  copyBtn.addEventListener('click', async ()=>{
-    if(!currentRows.length) return;
-    const sep = separatorSelect.value==='\\t'?'\t':separatorSelect.value;
-    const csvText = rowsToCsv(currentRows, sep);
-    try{
-      if(navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(csvText);
-      else{ const tbl = document.querySelector('#tableWrap table'); if(!tbl) throw new Error('No table');
-        const sel = window.getSelection(); const range=document.createRange(); range.selectNode(tbl); sel.removeAllRanges(); sel.addRange(range);
-        document.execCommand('copy'); sel.removeAllRanges();
-      }
-      copyMsg.style.display='block'; setTimeout(()=>{copyMsg.style.display='none';},1200);
-    } catch(e){ console.error('No se pudo copiar', e); }
+  separatorSelect.addEventListener('change',()=>{ if(showRaw) rawDisplay.value=rowsToCsv(window.currentRows, separatorSelect.value); });
+  toggleRawBtn.addEventListener('click',()=>{ showRaw=!showRaw; toggleRawBtn.textContent = showRaw?'Ocultar Raw':'Mostrar Raw'; showRawData(); });
+  globalFilter.addEventListener('input',()=>{ const val=globalFilter.value.toLowerCase(); const filtered=window.currentRows.filter(r=>Object.values(r).some(v=>String(v).toLowerCase().includes(val))); renderFilteredTbody(filtered); globalClearBtn.style.display=val?'inline':'none'; });
+  globalClearBtn.addEventListener('click',()=>{ globalFilter.value=''; renderFilteredTbody(window.currentRows); globalClearBtn.style.display='none'; });
+  toggleEditBtn.addEventListener('click',()=>{ editing=!editing; toggleEditBtn.textContent=editing?'✔️ Guardar':'✏️ Editar'; tableWrap.querySelectorAll('td').forEach(td=>{ td.contentEditable=editing; td.style.background=editing?'#fff3cf':''; }); });
+  copyBtn.addEventListener('click',()=>{
+    const txt=rowsToCsv(window.currentRows, separatorSelect.value);
+    navigator.clipboard.writeText(txt).then(()=>{ const msg=document.getElementById('copyMsg'); msg.style.display='block'; msg.style.top='10px'; msg.style.left='10px'; setTimeout(()=>msg.style.display='none',800); });
   });
   downloadSelect.addEventListener('change', ()=>{
-    if(!currentRows.length) return;
-    const val = downloadSelect.value; if(!val) return;
-    const sep = separatorSelect.value==='\\t'?'\t':separatorSelect.value;
-    if(val==='csv' || val==='txt'){
-      const csv = rowsToCsv(currentRows, sep);
-      const blobType = val==='csv'?'text/csv;charset=utf-8':'text/plain;charset=utf-8';
-      const blob = new Blob([csv], {type:blobType});
-      const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='data.'+val;
-      document.body.appendChild(a); a.click(); a.remove();
-    } else if(val==='xlsx'){
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.json_to_sheet(currentRows);
-      XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
-      XLSX.writeFile(wb, 'data.xlsx');
-    }
-    downloadSelect.value='';
+    const val=downloadSelect.value; if(!val) return; downloadSelect.value='';
+    if(val==='txt' || val==='csv'){ const blob=new Blob([rowsToCsv(window.currentRows, separatorSelect.value)],{type:'text/plain'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='tabla.'+val; a.click(); URL.revokeObjectURL(a.href); }
+    else if(val==='xlsx'){ const wb=XLSX.utils.book_new(); const ws=XLSX.utils.json_to_sheet(window.currentRows); XLSX.utils.book_append_sheet(wb,ws,'Sheet1'); XLSX.writeFile(wb,'tabla.xlsx'); }
   });
-  toggleEditBtn.addEventListener('click', ()=>{
-    editing = !editing;
-    toggleEditBtn.style.backgroundColor = editing ? '#d9edf7' : '';
-    tableWrap.querySelectorAll('tbody td').forEach(td=>{
-      if(editing){ td.contentEditable='true'; td.style.border='1px dashed #00f'; td.style.borderRadius='4px'; td.style.padding='3px'; }
-      else{ td.contentEditable='false'; td.style.border=''; td.style.borderRadius=''; td.style.padding=''; }
-    });
-  });
-  toggleRawBtn.addEventListener('click', ()=>{
-    showRaw = !showRaw; rawDisplay.style.display = showRaw?'block':'none';
-    if(showRaw) rawDisplay.textContent = JSON.stringify(lastJson, null, 2);
-  });
-  globalFilter.addEventListener('input', ()=>{
-    const val = globalFilter.value.toLowerCase();
-    const filtered = currentRows.filter(r=>Object.values(r).some(v=>v!==undefined && String(v).toLowerCase().includes(val)));
-    renderFilteredTbody(filtered);
-  });
-  globalClearBtn.addEventListener('click', ()=>{ globalFilter.value=''; renderFilteredTbody(currentRows); });
+
+  jsonHistorySelect.addEventListener('change',()=>{ const idx=parseInt(jsonHistorySelect.value); if(!isNaN(idx)) { jsonin.value=jsonHistory[idx]; parseJsonInput(); } });
+
+  // Config panel
+  configBtn.addEventListener('click',()=>{ configPanel.style.display=configPanel.style.display==='block'?'none':'block'; });
+  configPanel.innerHTML=`
+    <label><input type="checkbox" id="darkModeChk"> Modo oscuro</label>
+  `;
+  const darkModeChk = document.getElementById('darkModeChk');
+  darkModeChk.addEventListener('change',()=>{ document.body.classList.toggle('dark', darkModeChk.checked); });
+  if(localStorage.getItem('darkMode')==='true'){ document.body.classList.add('dark'); darkModeChk.checked=true; }
+  darkModeChk.addEventListener('change',()=>{ localStorage.setItem('darkMode', darkModeChk.checked); });
+
+  // Inicializar
+  updateHistorySelect();
+  const last=localStorage.getItem('lastJson'); if(last){ jsonin.value=last; parseJsonInput(); }
 });
 </script>
+
+
+
 </body>
 </html>
