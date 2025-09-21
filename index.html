@@ -7,603 +7,314 @@
 
 <!-- ===================== BLOQUE 1: CSS ===================== -->
 <style>
-/* ---------- General ---------- */
-body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:0;color:#111;height:100vh;display:flex;flex-direction:column;transition:background 0.3s,color 0.3s;}
-body.dark{background:#1e1e1e;color:#eee;}
-textarea#jsonin{width:100%;height:160px;font-family:monospace;padding:10px;box-sizing:border-box;font-size:12px;background:#fff;color:#000;transition:background 0.3s,color 0.3s;}
-body.dark textarea#jsonin{background:#2a2a2a;color:#eee;}
-.row{display:flex;gap:10px;margin:5px 10px;}
-button,input,select{padding:4px 8px;border-radius:4px;border:1px solid #bbb;background:#fafafa;cursor:pointer;font-size:12px;transition:background 0.3s,color 0.3s,border 0.3s;}
-body.dark button,body.dark input,body.dark select{background:#2a2a2a;color:#eee;border:1px solid #666;}
-body.dark select option{background:#2a2a2a;color:#eee;}
-input[type=text],select{box-sizing:border-box;}
-
-/* ---------- Tabla ---------- */
-#tableWrap{flex:1;overflow:auto;margin:5px 10px 10px 10px;position:relative;}
-table{border-collapse:collapse;font-family:monospace;font-size:12px;table-layout:auto;transition:color 0.3s,background 0.3s;}
-th,td{border:1px solid #ddd;padding:4px;text-align:left;white-space:nowrap;position:relative;user-select:none;transition:background 0.2s,color 0.2s;}
-body.dark th,body.dark td{border:1px solid #555;}
-th{position:sticky;top:0;background:#f2f2f2;z-index:2;cursor:pointer;}
-body.dark th{background:#333;color:#eee;}
-th.activeHeader{background:#d9edf7;}
-body.dark th.activeHeader{background:#555;color:#b0c4d0;}
-tr:nth-child(even) td{background:#f9f9f9;}
-tr:nth-child(odd) td{background:#e8f0ff;}
-body.dark tr:nth-child(even) td{background:#2a2a2a;color:#eee;}
-body.dark tr:nth-child(odd) td{background:#262626;color:#eee;}
-tr:hover td{background:#fff2cc;}
-body.dark tr:hover td{background:#444;}
-
-/* ---------- Filtros ---------- */
-.columnFilterContainer{position:relative; display:flex; align-items:center;}
-.columnFilter {width:70px; font-size:11px; padding:2px 18px 2px 4px; margin:2px 4px 0 0;}
-.clearBtn {position:absolute; right:2px; top:50%; transform:translateY(-50%); color:red; cursor:pointer; display:none; font-size:12px; user-select:none;}
-.globalFilterContainer{position:relative; width:30%; margin:5px 10px; display:none;}
-.globalFilter{width:100%; padding:4px 18px 4px 4px; font-size:12px;}
-.globalClearBtn{position:absolute; right:2px; top:50%; transform:translateY(-50%); color:red; cursor:pointer; display:none; font-size:12px; user-select:none;}
-
-/* ---------- Raw ---------- */
-#rawDisplay{display:none;height:auto;min-height:160px;margin:5px;padding:10px;font-family:monospace;font-size:12px;overflow:auto;border:1px solid #bbb;white-space:pre;background:#fff;color:#000;width:auto;max-width:100%;transition:background 0.3s,color 0.3s;}
-body.dark #rawDisplay{background:#2a2a2a;color:#eee;border:1px solid #666;}
-.blink{background:#fffa8c !important;}
-body.dark .blink{background:#555 !important;}
-#copyMsg{position:fixed;background:#d9edf7;padding:6px 10px;border-radius:6px;color:#000;display:none;z-index:9999;font-size:12px;transition:top 0.2s,left 0.2s,opacity 0.2s;}
-body.dark #copyMsg{background:#444;color:#fff;}
-
-/* ---------- Panel Configuración ---------- */
-#configPanel{
-  display:none;
-  position:absolute;
-  top:40px;
-  right:10px;
-  background:#fafafa;
-  border:1px solid #bbb;
-  padding:10px;
-  border-radius:6px;
-  z-index:999;
-  width:200px;
-  box-shadow:0 2px 8px rgba(0,0,0,0.2);
-  transition:background 0.3s,color 0.3s;
+:root {
+  --bg-color: #fff;
+  --text-color: #000;
+  --cell-even: #f9f9f9;
+  --cell-odd: #e8f0ff;
+  --header-bg: #f2f2f2;
+  --header-color: #111;
 }
-body.dark #configPanel{
-  background:#2a2a2a;
-  border:1px solid #666;
-  color:#eee;
+body.dark {
+  --bg-color: #1e1e1e;
+  --text-color: #eee;
+  --cell-even: #2a2a2a;
+  --cell-odd: #262626;
+  --header-bg: #333;
+  --header-color: #eee;
 }
-#configPanel label{font-size:12px; margin-right:5px;}
-#configPanel button{font-size:12px; padding:2px 6px;}
-#configPanel input[type=checkbox]{transform:scale(1.1); margin-left:5px;}
-
-/* ---------- Filtro Global y Botón Editar ---------- */
-.globalFilterContainer {
-  margin: 5px 10px;
-  gap: 4px; /* separación opcional entre elementos */
-  display: inline-block; /* para que el contenedor solo ocupe el espacio necesario */
+* { box-sizing: border-box; }
+body {
+  font-family: system-ui, Segoe UI, Roboto, Arial, sans-serif;
+  margin: 0; color: var(--text-color); background: var(--bg-color);
+  height: 100vh; display: flex; flex-direction: column;
+  transition: background 0.3s, color 0.3s;
 }
-.globalFilter { 
-  width: 200px; /* ancho fijo, cambia según prefieras */
-  padding: 4px 8px; 
-  font-size: 12px; 
-  box-sizing: border-box; 
+textarea#jsonin { width: 100%; height: 160px; font-family: monospace; padding: 10px; font-size: 12px; background: #fff; color: #000; transition: background 0.3s, color 0.3s; }
+body.dark textarea#jsonin { background: #2a2a2a; color: #eee; }
+.row { display: flex; gap: 10px; margin: 5px 10px; flex-wrap: wrap; align-items: center; }
+button, input, select { padding: 4px 8px; border-radius: 4px; border: 1px solid #bbb; background: #fafafa; cursor: pointer; font-size: 12px; transition: background 0.3s, color 0.3s, border 0.3s; }
+body.dark button, body.dark input, body.dark select { background: #2a2a2a; color: #eee; border: 1px solid #666; }
+body.dark select option { background: #2a2a2a; color: #eee; }
+input[type=text], select { width: auto; }
+#tableWrap { flex: 1; overflow: auto; margin: 5px 10px 10px 10px; position: relative; }
+table { border-collapse: collapse; font-family: monospace; font-size: 12px; table-layout: auto; width: 100%; transition: color 0.3s, background 0.3s; }
+th, td {
+  border: 1px solid #ccc; padding: 6px 8px; text-align: left; white-space: nowrap; position: relative; user-select: none;
+  transition: background 0.2s, color 0.2s; color: var(--text-color);
 }
-.globalClearBtn {
-  cursor: pointer; 
-  font-size: 12px; 
-  color: red; 
-  user-select: none; 
-  display: inline-block;
-  margin-left: 4px;
+th { position: sticky; top: 0; background: var(--header-bg); color: var(--header-color); z-index: 2; cursor: pointer; }
+th.activeHeader { background: #d9edf7; }
+tr:nth-child(even) td { background: var(--cell-even); }
+tr:nth-child(odd) td { background: var(--cell-odd); }
+tr:hover td { background: #fff2cc; }
+.columnFilterContainer { position: relative; display: flex; align-items: center; }
+.columnFilter { width: 70px; font-size: 11px; padding: 2px 18px 2px 4px; margin: 2px 4px 0 0; }
+.clearBtn { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); color: red; cursor: pointer; display: none; font-size: 12px; user-select: none; }
+.globalFilterContainer { position: relative; margin: 5px 10px; gap: 4px; display: inline-flex; align-items: center; }
+.globalFilter { cursor: text; width: 200px; padding: 4px 8px; font-size: 12px; border-radius: 4px; }
+.globalClearBtn { cursor: pointer; font-size: 12px; color: red; user-select: none; display: inline-block; margin-left: 4px; }
+#rawDisplay {
+  display: none; height: auto; min-height: 160px; margin: 5px; padding: 10px; font-family: monospace;
+  font-size: 12px; overflow: auto; border: 1px solid #bbb; white-space: pre; background: #fff; color: #000; width: auto; max-width: 100%;
+  transition: background 0.3s, color 0.3s;
 }
-#toggleEditBtn {
-  font-size: 12px; 
-  padding: 4px 6px;
-  cursor: pointer;
-  display: inline-block;
-  margin-left: 4px; /* separa un poco del input y la X */
+body.dark #rawDisplay { background: #2a2a2a; color: #eee; border: 1px solid #666; }
+.blink { background: #fffa8c !important; }
+#copyMsg { position: fixed; background: #d9edf7; padding: 6px 10px; border-radius: 6px; color: #000; display: none; z-index: 9999; font-size: 12px; transition: top 0.2s, left 0.2s, opacity 0.2s; }
+body.dark #copyMsg { background: #444; color: #fff; }
+#configPanel {
+  display: none; position: absolute; top: 40px; right: 10px; background: #fafafa; border: 1px solid #bbb;
+  padding: 10px; border-radius: 6px; z-index: 999; width: 200px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  transition: background 0.3s, color 0.3s;
 }
+body.dark #configPanel { background: #2a2a2a; border: 1px solid #666; color: #eee; }
+#configPanel label { font-size: 12px; margin-right: 5px; }
+#configPanel button { font-size: 12px; padding: 2px 6px; }
+#configPanel input[type=checkbox] { transform: scale(1.1); margin-left: 5px; }
+#toggleEditBtn { font-size: 12px; padding: 4px 6px; cursor: pointer; display: inline-block; margin-left: 4px; }
 </style>
 
-<!-- ===================== BLOQUE 2: Inputs URL y Config ===================== -->
+<!-- ===================== BLOQUE 2: HTML ===================== -->
 <div class="row">
-  <input id="urlIn" placeholder="URL con JSON" style="flex:1;min-width:200px;height:28px"/>
-  <button id="fetchBtn">Cargar URL</button>
-  <button id="configBtn">⚙️ Configuración</button>
+  <input type="text" id="urlIn" placeholder="Pega URL aquí..." style="flex:1;" />
+  <button id="fetchBtn">📡 Cargar URL</button>
+  <button id="configBtn">⚙️ Config</button>
 </div>
 
-<!-- ===================== BLOQUE 3: Panel de Configuración ===================== -->
-<div id="configPanel" style="display:none; position:absolute; top:40px; right:10px; background:#fafafa; border:1px solid #bbb; padding:10px; border-radius:6px; z-index:1000; width:200px; box-shadow:0 2px 8px rgba(0,0,0,0.2);">
-  <button id="themeToggleBtn" style="width:100%; margin-bottom:8px;">🌙/☀️</button>
-  <label style="display:block; font-size:12px;">
-    <input type="checkbox" id="autoThemeChk"> Auto-adaptar tema
-  </label>
-  <button id="openCustomThemeBtn" style="width:100%; margin-top:8px; font-size:12px;">🎨 Tema personalizado</button>
-  <div style="margin-top:8px;">
-    <label style="font-size:12px;">Historial JSON:</label>
-    <select id="jsonHistorySelect" style="width:100%; font-size:12px;">
-      <option value="">-- Seleccionar JSON --</option>
-    </select>
-  </div>
-</div>
-
-
-<!-- ===================== BLOQUE 3.1: Panel Tema Personalizado ===================== -->
-<div id="customThemePanel" style="display:none; position:absolute; top:100px; right:10px; background:#fafafa; border:1px solid #bbb; padding:10px; border-radius:6px; z-index:999; width:220px; box-shadow:0 2px 8px rgba(0,0,0,0.2); transition:background 0.3s,color 0.3s;">
-  <h4 style="margin:0 0 8px 0; font-size:14px;">Tema Personalizado</h4>
-  
-  <div style="margin-bottom:6px;">
-    <label style="font-size:12px;">Fondo:</label>
-    <input type="color" id="bgColorInput" value="#ffffff" style="width:100%;">
-  </div>
-  <div style="margin-bottom:6px;">
-    <label style="font-size:12px;">Texto:</label>
-    <input type="color" id="textColorInput" value="#000000" style="width:100%;">
-  </div>
-  <div style="margin-bottom:6px;">
-    <label style="font-size:12px;">Tipografía:</label>
-    <input type="text" id="fontInput" placeholder="Arial, Roboto..." style="width:100%;">
-  </div>
-  <div style="margin-bottom:6px;">
-    <label style="font-size:12px;">Celdas pares:</label>
-    <input type="color" id="cellColorEvenInput" value="#f9f9f9" style="width:100%;">
-  </div>
-  <div style="margin-bottom:6px;">
-    <label style="font-size:12px;">Celdas impares:</label>
-    <input type="color" id="cellColorOddInput" value="#e8f0ff" style="width:100%;">
-  </div>
-  <button id="applyThemeBtn" style="width:100%; padding:4px 0; font-size:12px; margin-bottom:4px;">Aplicar Tema</button>
-  <button id="resetThemeBtn" style="width:100%; padding:4px 0; font-size:12px;">Default</button>
-</div>
-
-
-<!-- ===================== BLOQUE 4: JSON Input ===================== -->
 <div class="row">
   <textarea id="jsonin" placeholder='Pega JSON aquí'></textarea>
 </div>
 
-<!-- ===================== BLOQUE 5: Botones Limpiar / Separador / Descarga / Raw / Copiar ===================== -->
+<div id="configPanel"></div>
+
 <div class="row">
   <button id="clearBtn">Limpiar JSON</button>
 </div>
+
 <div class="row">
   <label>Separador:</label>
   <select id="separatorSelect">
-    <option value="\t">Tab</option>
+    <option value="	">Tab</option>
     <option value=";">;</option>
     <option value=",">,</option>
   </select>
-  <select id="downloadSelect" disabled>
+
+  <select id="downloadSelect">
     <option value="">Descargar...</option>
     <option value="csv">CSV</option>
     <option value="xlsx">XLSX</option>
     <option value="txt">TXT</option>
   </select>
-  <button id="toggleRawBtn" disabled>Mostrar Raw</button>
-  <button id="copyBtn" disabled>Copiar tabla</button>
+
+  <button id="toggleRawBtn">Mostrar Raw</button>
+  <button id="copyBtn">Copiar tabla</button>
 </div>
 
-<!-- ===================== BLOQUE 6: Raw Display y Mensaje Copiado ===================== -->
+<div class="globalFilterContainer">
+  <input id="globalFilter" class="globalFilter" placeholder="Buscar en toda la tabla..." />
+  <span id="globalClearBtn" class="globalClearBtn">✕</span>
+  <button id="toggleEditBtn">✏️ Editar</button>
+  <select id="jsonHistorySelect">
+    <option value="">-- Seleccionar JSON --</option>
+  </select>
+</div>
+
 <textarea id="rawDisplay" readonly></textarea>
 <div id="copyMsg">Copiado al portapapeles</div>
-
-<!-- ===================== BLOQUE 7: Contenedor de Búsqueda Global y Editar ===================== -->
-<div id="globalFilterContainer" class="globalFilterContainer" style="display:none; margin:5px 10px; gap:6px; align-items:center;">
-  <div style="position:relative; display:inline-block;">
-    <input id="globalFilter" class="globalFilter" placeholder="Buscar en toda la tabla..." style="width:200px; padding:4px 25px 4px 8px; font-size:12px; box-sizing:border-box; border-radius:4px;" />
-    <span id="globalClearBtn" class="globalClearBtn" style="
-        position:absolute;
-        right:4px;
-        top:50%;
-        transform:translateY(-50%);
-        color:red;
-        font-weight:bold;
-        font-size:14px;
-        cursor:pointer;
-        display:none;
-        user-select:none;
-    ">✕</span>
-  </div>
-  <button id="toggleEditBtn" style="font-size:12px; padding:4px 6px;">✏️ Editar</button>
-</div>
-
-<script>
-const gFilter = document.getElementById('globalFilter');
-const gClear = document.getElementById('globalClearBtn');
-
-gFilter.addEventListener('input', () => {
-  gClear.style.display = gFilter.value ? 'inline-block' : 'none';
-  renderFilteredAndSorted();
-});
-
-gClear.addEventListener('click', () => {
-  gFilter.value = '';
-  gClear.style.display = 'none';
-  renderFilteredAndSorted();
-});
-</script>
-
-
-
-
-
-
-<!-- ===================== BLOQUE 8: Contenedor de Tabla ===================== -->
 <div id="tableWrap"></div>
 
-<!-- ===================== BLOQUE 9: Script Principal ===================== -->
+<!-- ===================== BLOQUE 3: JS ===================== -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-/* ===================== BLOQUE 9.1: Variables y Elementos ===================== */
-const jsonin=document.getElementById('jsonin');
-const tableWrap=document.getElementById('tableWrap');
-const downloadSelect=document.getElementById('downloadSelect');
-const copyBtn=document.getElementById('copyBtn');
-const clearBtn=document.getElementById('clearBtn');
-const urlIn=document.getElementById('urlIn');
-const fetchBtn=document.getElementById('fetchBtn');
-const separatorSelect=document.getElementById('separatorSelect');
-const globalFilter=document.querySelector('.globalFilter');
-const globalClearBtn=document.querySelector('.globalClearBtn');
-const toggleRawBtn=document.getElementById('toggleRawBtn');
-const rawDisplay=document.getElementById('rawDisplay');
-const copyMsg=document.getElementById('copyMsg');
-const configBtn=document.getElementById('configBtn');
-const configPanel=document.getElementById('configPanel');
-const themeToggleBtn=document.getElementById('themeToggleBtn');
-const autoThemeChk=document.getElementById('autoThemeChk');
-const globalFilterContainer=document.querySelector('.globalFilterContainer');
+document.addEventListener('DOMContentLoaded', ()=>{
+  const jsonin=document.getElementById('jsonin');
+  const tableWrap=document.getElementById('tableWrap');
+  const downloadSelect=document.getElementById('downloadSelect');
+  const copyBtn=document.getElementById('copyBtn');
+  const clearBtn=document.getElementById('clearBtn');
+  const urlIn=document.getElementById('urlIn');
+  const fetchBtn=document.getElementById('fetchBtn');
+  const separatorSelect=document.getElementById('separatorSelect');
+  const globalFilter=document.getElementById('globalFilter');
+  const globalClearBtn=document.getElementById('globalClearBtn');
+  const toggleRawBtn=document.getElementById('toggleRawBtn');
+  const rawDisplay=document.getElementById('rawDisplay');
+  const toggleEditBtn=document.getElementById('toggleEditBtn');
+  const jsonHistorySelect=document.getElementById('jsonHistorySelect');
+  const configBtn=document.getElementById('configBtn');
+  const configPanel=document.getElementById('configPanel');
 
-let currentRows=[], currentHeaders=[], sortState={}, showRaw=false;
-let theme=window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
+  window.currentRows=[];
+  let currentHeaders=[], sortState={}, showRaw=false, editing=false;
+  let lastJson=null;
+  let jsonHistory = JSON.parse(localStorage.getItem('jsonHistory')||'[]');
 
-/* ===================== BLOQUE 9.2: Funciones utilitarias ===================== */
-function isObj(x){ return x && typeof x==='object' && !Array.isArray(x); }
-function flattenObject(obj,prefix='',out={}){ 
-  if(Array.isArray(obj)){ out[prefix.slice(0,-1)||'array']=JSON.stringify(obj); return out;}
-  for(const k of Object.keys(obj||{})){
-    const v=obj[k],key=prefix+k+'.';
-    if(isObj(v)) flattenObject(v,key,out);
-    else if(Array.isArray(v)) out[key.slice(0,-1)]=JSON.stringify(v);
-    else out[key.slice(0,-1)]=v;
-  }
-  return out;
-}
-function getRowsFromJson(parsed){
-  if(Array.isArray(parsed)) return parsed.map(o=>flattenObject(o));
-  for(const k of ['items','rankings','data','rows','result','results']) if(Array.isArray(parsed[k])) return parsed[k].map(o=>flattenObject(o));
-  for(const k of Object.keys(parsed)) if(Array.isArray(parsed[k])) return parsed[k].map(o=>flattenObject(o));
-  return [flattenObject(parsed)];
-}
-function rowsToCsv(rows,sep){
-  if(!rows||rows.length===0) return '';
-  const allKeys=new Set(); rows.forEach(r=>Object.keys(r).forEach(k=>allKeys.add(k)));
-  const headers=Array.from(allKeys);
-  const esc=v=>{ if(v==null) return ''; const s=String(v); return /["\n,]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
-  const lines=[headers.join(sep)];
-  for(const r of rows) lines.push(headers.map(h=>esc(r[h])).join(sep));
-  return lines.join('\n');
-}
-
-// ===================== BLOQUE 9.3: Configuración y Tema =====================
-const savedTheme = localStorage.getItem('theme');
-theme = savedTheme || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-document.body.classList.toggle('dark', theme === 'dark');
-themeToggleBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
-
-const savedAutoTheme = localStorage.getItem('autoTheme');
-autoThemeChk.checked = savedAutoTheme === null ? true : savedAutoTheme === 'true';
-
-configBtn.addEventListener('click', () => {
-  configPanel.style.display = configPanel.style.display === 'block' ? 'none' : 'block';
-});
-document.addEventListener('click', e => {
-  if (!configPanel.contains(e.target) && !configBtn.contains(e.target)) configPanel.style.display = 'none';
-});
-
-themeToggleBtn.addEventListener('click', () => {
-  document.body.classList.toggle('dark');
-  theme = document.body.classList.contains('dark') ? 'dark' : 'light';
-  themeToggleBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
-  localStorage.setItem('theme', theme);
-  renderTable();
-  renderFilteredAndSorted();
-});
-
-autoThemeChk.addEventListener('change', () => {
-  localStorage.setItem('autoTheme', autoThemeChk.checked);
-  if (autoThemeChk.checked) {
-    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    document.body.classList.toggle('dark', theme === 'dark');
-    themeToggleBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
-    localStorage.setItem('theme', theme);
-    renderTable();
-    renderFilteredAndSorted();
-  }
-});
-
-// Abrir/cerrar panel de tema personalizado
-const customThemePanel = document.getElementById('customThemePanel');
-const openCustomThemeBtn = document.getElementById('openCustomThemeBtn');
-openCustomThemeBtn.addEventListener('click', () => {
-  customThemePanel.style.display = (customThemePanel.style.display === 'block') ? 'none' : 'block';
-});
-
-<!-- ===================== BLOQUE 9.4: Renderizado Tabla (con encabezados activos) ===================== -->
-function renderTable(){
-  tableWrap.innerHTML='';
-  if(currentRows.length===0){ tableWrap.innerText='No rows'; return; }
-
-  const tbl = document.createElement('table');
-  const thead = tbl.createTHead();
-  const headRow = thead.insertRow();
-
-  currentHeaders.forEach((h, idx) => {
-    const th = document.createElement('th');
-    const flexDiv = document.createElement('div');
-    flexDiv.style.display='flex';
-    flexDiv.style.alignItems='center';
-    flexDiv.style.justifyContent='space-between';
-
-    const span = document.createElement('span');
-    span.textContent = getSortArrow(h)+' '+h;
-    span.style.color = sortState[h]!==undefined ? (theme==='dark'?'#b0c4d0':'blue'):'black';
-    flexDiv.appendChild(span);
-
-    const inputContainer = document.createElement('div'); 
-    inputContainer.className='columnFilterContainer';
-    const input = document.createElement('input'); 
-    input.className='columnFilter'; 
-    input.placeholder='';
-    const clearBtnCol = document.createElement('span'); 
-    clearBtnCol.className='clearBtn'; 
-    clearBtnCol.textContent='✕';
-    clearBtnCol.addEventListener('click',()=>{
-      input.value=''; renderFilteredAndSorted(); clearBtnCol.style.display='none';
-    });
-    input.addEventListener('input',()=>{
-      clearBtnCol.style.display=input.value?'inline-block':'none'; 
-      renderFilteredAndSorted(); 
-    });
-    inputContainer.appendChild(input); 
-    inputContainer.appendChild(clearBtnCol);
-    flexDiv.appendChild(inputContainer);
-
-    th.appendChild(flexDiv);
-    th.addEventListener('click', ()=>{
-      const asc = !sortState[h]; 
-      sortState = {}; 
-      sortState[h] = asc;
-      renderFilteredAndSorted();
-      updateHeaderArrows(tbl);
-    });
-    headRow.appendChild(th);
-  });
-
-  tbl.createTBody();
-  tableWrap.appendChild(tbl);
-  updateHeaderArrows(tbl);
-}
-
-function getSortArrow(header){
-  return sortState[header]===true?'↑':sortState[header]===false?'↓':'⬍';
-}
-
-function updateHeaderArrows(tbl){
-  Array.from(tbl.tHead.rows[0].cells).forEach(th=>{
-    const span = th.querySelector('span');
-    const h = span.textContent.replace(/^⬍ |^↑ |^↓ /,'');
-    span.textContent = getSortArrow(h)+' '+h;
-    th.className = sortState[h]!==undefined ? 'activeHeader' : '';
-  });
-}
-
-function renderFilteredAndSorted(){
-  let filtered = currentRows.slice();
-  const tbl = tableWrap.querySelector('table');
-  if(!tbl) {
-    globalFilterContainer.style.display='none';
-    return;
-  }
-  const tbody = tbl.tBodies[0];
-  tbody.innerHTML='';
-
-  Array.from(tbl.tHead.rows[0].cells).forEach((th, idx)=>{
-    const val = th.querySelector('input')?.value.toLowerCase()||'';
-    if(val) filtered = filtered.filter(r => String(r[currentHeaders[idx]]??'').toLowerCase().includes(val));
-  });
-
-  const gval = globalFilter.value.toLowerCase();
-  if(gval && !showRaw) filtered = filtered.filter(r => Object.values(r).some(v => String(v??'').toLowerCase().includes(gval)));
-
-  const sortKey = Object.keys(sortState)[0];
-  if(sortKey){
-    const asc = sortState[sortKey];
-    filtered.sort((a,b)=>{
-      let va = a[sortKey], vb = b[sortKey];
-      if(typeof va==='object') va=JSON.stringify(va);
-      if(typeof vb==='object') vb=JSON.stringify(vb);
-      if(!isNaN(va) && !isNaN(vb)) return asc ? va - vb : vb - va;
-      return asc ? String(va??'').localeCompare(String(vb??'')) : String(vb??'').localeCompare(String(va??''));
-    });
-  }
-
-  filtered.forEach((r, i)=>{
-    const tr = tbody.insertRow();
-    const baseColor = i%2===0 ? (theme==='dark'?'#2a2a2a':'#f9f9f9') : (theme==='dark'?'#262626':'#e8f0ff');
-    currentHeaders.forEach(h=>{
-      const td = tr.insertCell();
-      let val = r[h];
-      if(typeof val==='object') val = JSON.stringify(val);
-      td.textContent = val??'';
-      td.style.background = baseColor;
-    });
-    tr.addEventListener('mouseenter', ()=>Array.from(tr.cells).forEach(td=>td.style.background = theme==='dark'?'#444':'#fff2cc'));
-    tr.addEventListener('mouseleave', ()=>Array.from(tr.cells).forEach(td=>td.style.background = baseColor));
-  });
-
-  // Mostrar u ocultar el filtro global y botón editar
-  globalFilterContainer.style.display = currentRows.length && !showRaw ? 'flex' : 'none';
-}
-
-
-/* ===================== BLOQUE 9.6: Raw / JSON ===================== */
-function updateTableFromJson(raw){
-  if(!raw.trim()){
-    tableWrap.innerHTML='';
-    toggleRawBtn.disabled=true; copyBtn.disabled=true; downloadSelect.disabled=true;
-    globalFilterContainer.style.display='none';
-    return;
-  }
-  try{
-    const parsed=JSON.parse(raw);
-    currentRows=getRowsFromJson(parsed);
-    currentHeaders=Array.from(currentRows.reduce((s,r)=>{Object.keys(r).forEach(k=>s.add(k)); return s;}, new Set()));
-    sortState={};
-
-    if(showRaw){ rawDisplay.style.display='block'; tableWrap.style.display='none'; updateRawDisplay(); }
-    else{ rawDisplay.style.display='none'; tableWrap.style.display='block'; }
-
-    renderTable(); renderFilteredAndSorted();
-    toggleRawBtn.disabled=false; copyBtn.disabled=false; downloadSelect.disabled=false;
-  }catch(e){
-    tableWrap.innerText='JSON inválido';
-    toggleRawBtn.disabled=true; copyBtn.disabled=true; downloadSelect.disabled=true;
-  }
-}
-
-function updateRawDisplay(){
-  let sep = separatorSelect.value==='\\t' ? '\t' : separatorSelect.value;
-  let csv = rowsToCsv(currentRows, sep);
-  rawDisplay.value = csv;
-  rawDisplay.style.width='auto';
-  rawDisplay.select();
-  rawDisplay.classList.add('blink');
-  setTimeout(()=>rawDisplay.classList.remove('blink'),300);
-}
-
-/* ===================== BLOQUE 9.7: Eventos Input y Botones ===================== */
-jsonin.addEventListener('input',()=>updateTableFromJson(jsonin.value));
-separatorSelect.addEventListener('change',()=>{ if(showRaw) updateRawDisplay(); });
-toggleRawBtn.addEventListener('click',()=>{ showRaw=!showRaw; toggleRawBtn.textContent=showRaw?'Quitar Raw':'Mostrar Raw'; updateTableFromJson(jsonin.value); });
-clearBtn.addEventListener('click',()=>{ jsonin.value=''; updateTableFromJson(''); rawDisplay.style.display='none'; showRaw=false; });
-globalFilter.addEventListener('input',()=>{ renderFilteredAndSorted(); globalClearBtn.style.display=globalFilter.value?'inline-block':'none'; });
-globalClearBtn.addEventListener('click',()=>{ globalFilter.value=''; renderFilteredAndSorted(); globalClearBtn.style.display='none'; });
-
-/* ===================== BLOQUE 9.8: Copiar tabla ===================== */
-copyBtn.addEventListener('click',(e)=>{
-  const sep=separatorSelect.value==='\\t'?'\t':separatorSelect.value;
-  const csv=rowsToCsv(currentRows,sep);
-  navigator.clipboard.writeText(csv).then(()=>{
-    copyMsg.style.top=(e.clientY+10)+'px';
-    copyMsg.style.left=(e.clientX+10)+'px';
-    copyMsg.style.display='block';
-    setTimeout(()=>copyMsg.style.display='none',1500);
-  });
-});
-
-<!-- ===================== BLOQUE 9.9: Fetch y Descarga ===================== -->
-fetchBtn.addEventListener('click', async () => {
-  const u = urlIn.value.trim(); 
-  if (!u) return alert('Pon una URL');
-  try {
-    fetchBtn.disabled = true;
-    const res = await fetch(u, { cache: 'no-store' });
-    const text = await res.text();
-    try { 
-      const parsed = JSON.parse(text); 
-      jsonin.value = JSON.stringify(parsed, null, 2);
-    } catch (_) { 
-      const m = text.match(/(\{[\s\S]*\}|\[[\s\S]*\])/); 
-      jsonin.value = m ? m[0] : text;
+  function isObj(x){ return x && typeof x==='object' && !Array.isArray(x); }
+  function flattenObject(obj,prefix='',out={}) {
+    if(Array.isArray(obj)){ out[prefix.slice(0,-1)||'array']=JSON.stringify(obj); return out; }
+    for(const k of Object.keys(obj||{})){
+      const v=obj[k], key=prefix+k+'.';
+      if(isObj(v)) flattenObject(v,key,out);
+      else if(Array.isArray(v)) out[key.slice(0,-1)] = JSON.stringify(v);
+      else out[key.slice(0,-1)] = v;
     }
-    updateTableFromJson(jsonin.value);
-  } catch (e) { 
-    alert('Error al cargar: ' + e.message); 
-  } finally { 
-    fetchBtn.disabled = false; 
+    return out;
   }
-});
-
-downloadSelect.addEventListener('change', () => {
-  const val = downloadSelect.value; 
-  const sep = separatorSelect.value === '\\t' ? '\t' : separatorSelect.value;
-  if (!val) return;
-
-  const triggerDownload = (blob, filename) => {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  };
-
-  if (val === 'csv' || val === 'txt') {
-    const csv = rowsToCsv(currentRows, sep);
-    const blob = new Blob([csv], { type: 'text/' + val });
-    triggerDownload(blob, 'export.' + val);
-  } else if (val === 'xlsx') {
-    const ws = XLSX.utils.json_to_sheet(currentRows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
-    XLSX.writeFile(wb, 'export.xlsx');
+  function getRowsFromJson(parsed){
+    if(Array.isArray(parsed)) return parsed.map(o => flattenObject(o));
+    for(const k of Object.keys(parsed)){ if(Array.isArray(parsed[k])) return parsed[k].map(o=>flattenObject(o)); }
+    return [flattenObject(parsed)];
+  }
+  function escRegex(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+  function rowsToCsv(rows, sep){
+    if(!rows || !rows.length) return '';
+    const allKeys = new Set();
+    rows.forEach(r=>Object.keys(r).forEach(k=>allKeys.add(k)));
+    const headers = Array.from(allKeys);
+    const actualSep = sep==='\\t'?'\t':sep;
+    const esc = v=>{
+      if(v==null) return '';
+      const s=String(v);
+      if(new RegExp('["\\n'+escRegex(actualSep)+']').test(s) || s.includes('\r')) return '"'+s.replace(/"/g,'""')+'"';
+      return s;
+    };
+    const lines=[headers.join(actualSep)];
+    for(const r of rows) lines.push(headers.map(h=>esc(r[h])).join(actualSep));
+    return lines.join('\n');
   }
 
-  // Resetear select para poder descargar el mismo formato nuevamente
-  downloadSelect.value = '';
-});
+  function parseJsonInput(){
+    let parsed;
+    try { parsed = JSON.parse(jsonin.value); }
+    catch(e){ tableWrap.innerHTML=''; toggleRawBtn.disabled=true; downloadSelect.disabled=true; copyBtn.disabled=true; return; }
+    lastJson = parsed;
+    window.currentRows = getRowsFromJson(parsed);
+    const allKeys = new Set(); window.currentRows.forEach(r=>Object.keys(r).forEach(k=>allKeys.add(k))); currentHeaders = Array.from(allKeys);
+    renderTable();
+    const hasRows = window.currentRows.length>0;
+    toggleRawBtn.disabled = !hasRows;
+    updateDownloadCopyButtons(hasRows);
+    if(hasRows) addToHistory(jsonin.value);
+    if(hasRows) localStorage.setItem('lastJson', jsonin.value);
+  }
 
-/* ----- Historial JSON solo para JSON originales ----- */
-const jsonHistorySelect = document.getElementById('jsonHistorySelect');
-let jsonHistory = JSON.parse(localStorage.getItem('jsonHistory') || '[]');
+  function updateDownloadCopyButtons(enabled){ copyBtn.disabled=!enabled; downloadSelect.disabled=!enabled; }
 
-function addToHistory(jsonText) {
-  if(!jsonText.trim()) return;
-  if(jsonHistory.includes(jsonText)) return;
-  jsonHistory.unshift(jsonText);
-  if(jsonHistory.length>100) jsonHistory.pop();
-  localStorage.setItem('jsonHistory', JSON.stringify(jsonHistory));
-  renderHistory();
-}
+  function renderFilteredTbody(rows, highlightCol=null){
+    const tbody = tableWrap.querySelector('tbody');
+    if(!tbody) return;
+    tbody.innerHTML='';
+    const headers = currentHeaders || [];
+    rows.forEach(r=>{
+      const tr=document.createElement('tr');
+      headers.forEach(h=>{
+        const td=document.createElement('td'); td.textContent = r[h]!==undefined?r[h]:''; tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+    if(highlightCol){
+      const idx = headers.indexOf(highlightCol);
+      if(idx>=0){
+        tbody.querySelectorAll('tr').forEach(tr=>{
+          const td=tr.children[idx];
+          if(td){ td.classList.add('blink'); setTimeout(()=>td.classList.remove('blink'),150); }
+        });
+      }
+    }
+  }
 
-function renderHistory() {
-  jsonHistorySelect.innerHTML = '<option value="">-- Seleccionar JSON --</option>';
-  jsonHistory.forEach((j, idx) => {
-    const opt = document.createElement('option');
-    opt.value = idx;
-    opt.textContent = j.slice(0,50).replace(/\n/g,' ') + (j.length>50?'...':'');
-    jsonHistorySelect.appendChild(opt);
+  function renderTable(){
+    tableWrap.innerHTML=''; if(!window.currentRows.length){ updateDownloadCopyButtons(false); return; }
+    const tbl=document.createElement('table'); const thead=document.createElement('thead');
+    const trh=document.createElement('tr');
+    currentHeaders.forEach(h=>{
+      const th=document.createElement('th'); th.textContent=h; th.style.minWidth='80px';
+      th.addEventListener('click', ()=>sortColumn(h)); trh.appendChild(th);
+    });
+    thead.appendChild(trh);
+    // Filtros por columna
+    const trFilters=document.createElement('tr');
+    currentHeaders.forEach(h=>{
+      const th=document.createElement('th'); th.style.padding='2px'; th.style.minWidth='80px';
+      const inputContainer=document.createElement('div'); inputContainer.style.display='flex'; inputContainer.style.alignItems='center'; inputContainer.style.justifyContent='space-between';
+      const input=document.createElement('input'); input.type='text'; input.placeholder='🔍'; input.className='columnFilter';
+      input.style.flex='1'; input.style.fontSize='11px'; input.style.padding='2px 4px'; input.style.boxSizing='border-box'; input.style.cursor='text';
+      const clearX=document.createElement('span'); clearX.textContent='✕'; clearX.className='clearBtn'; clearX.style.display='none';
+      clearX.style.cursor='pointer'; clearX.style.marginLeft='4px'; clearX.style.flex='0 0 auto';
+      input.addEventListener('input',()=>{ const val=input.value.toLowerCase(); const filtered=window.currentRows.filter(r=>r[h]!==undefined && String(r[h]).toLowerCase().includes(val)); renderFilteredTbody(filtered,h); clearX.style.display = val?'inline':'none'; });
+      clearX.addEventListener('click',()=>{ input.value=''; input.focus(); clearX.style.display='none'; renderFilteredTbody(window.currentRows); });
+      inputContainer.appendChild(input); inputContainer.appendChild(clearX); th.appendChild(inputContainer); trFilters.appendChild(th);
+    });
+    thead.appendChild(trFilters); tbl.appendChild(thead); tbl.appendChild(document.createElement('tbody')); tableWrap.appendChild(tbl);
+    renderFilteredTbody(window.currentRows);
+  }
+
+  function sortColumn(header){
+    const dir = sortState[header]==='asc'?'desc':'asc'; sortState[header]=dir;
+    window.currentRows.sort((a,b)=>{
+      const va=a[header]??''; const vb=b[header]??''; if(va===vb) return 0;
+      if(dir==='asc') return va>vb?1:-1; else return va>vb?-1:1;
+    });
+    renderTable();
+  }
+
+  function addToHistory(jsonStr){
+    if(jsonHistory.includes(jsonStr)) return;
+    jsonHistory.unshift(jsonStr);
+    if(jsonHistory.length>20) jsonHistory.pop();
+    localStorage.setItem('jsonHistory', JSON.stringify(jsonHistory));
+    updateHistorySelect();
+  }
+
+  function updateHistorySelect(){
+    jsonHistorySelect.innerHTML='<option value="">-- Seleccionar JSON --</option>';
+    jsonHistory.forEach((j,i)=>{ const opt=document.createElement('option'); opt.value=i; opt.textContent='JSON '+(i+1); jsonHistorySelect.appendChild(opt); });
+  }
+
+  function showRawData(){ rawDisplay.style.display=showRaw?'block':'none'; if(showRaw) rawDisplay.value=rowsToCsv(window.currentRows, separatorSelect.value); }
+
+  // Eventos
+  jsonin.addEventListener('input', parseJsonInput);
+  clearBtn.addEventListener('click',()=>{ jsonin.value=''; parseJsonInput(); });
+  fetchBtn.addEventListener('click',()=>{
+    if(!urlIn.value) return;
+    fetch(urlIn.value).then(r=>r.json()).then(data=>{ jsonin.value=JSON.stringify(data,null,2); parseJsonInput(); }).catch(console.error);
   });
-}
-renderHistory();
+  separatorSelect.addEventListener('change',()=>{ if(showRaw) rawDisplay.value=rowsToCsv(window.currentRows, separatorSelect.value); });
+  toggleRawBtn.addEventListener('click',()=>{ showRaw=!showRaw; toggleRawBtn.textContent = showRaw?'Ocultar Raw':'Mostrar Raw'; showRawData(); });
+  globalFilter.addEventListener('input',()=>{ const val=globalFilter.value.toLowerCase(); const filtered=window.currentRows.filter(r=>Object.values(r).some(v=>String(v).toLowerCase().includes(val))); renderFilteredTbody(filtered); globalClearBtn.style.display=val?'inline':'none'; });
+  globalClearBtn.addEventListener('click',()=>{ globalFilter.value=''; renderFilteredTbody(window.currentRows); globalClearBtn.style.display='none'; });
+  toggleEditBtn.addEventListener('click',()=>{ editing=!editing; toggleEditBtn.textContent=editing?'✔️ Guardar':'✏️ Editar'; tableWrap.querySelectorAll('td').forEach(td=>{ td.contentEditable=editing; td.style.background=editing?'#fff3cf':''; }); });
+  copyBtn.addEventListener('click',()=>{
+    const txt=rowsToCsv(window.currentRows, separatorSelect.value);
+    navigator.clipboard.writeText(txt).then(()=>{ const msg=document.getElementById('copyMsg'); msg.style.display='block'; msg.style.top='10px'; msg.style.left='10px'; setTimeout(()=>msg.style.display='none',800); });
+  });
+  downloadSelect.addEventListener('change', ()=>{
+    const val=downloadSelect.value; if(!val) return; downloadSelect.value='';
+    if(val==='txt' || val==='csv'){ const blob=new Blob([rowsToCsv(window.currentRows, separatorSelect.value)],{type:'text/plain'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='tabla.'+val; a.click(); URL.revokeObjectURL(a.href); }
+    else if(val==='xlsx'){ const wb=XLSX.utils.book_new(); const ws=XLSX.utils.json_to_sheet(window.currentRows); XLSX.utils.book_append_sheet(wb,ws,'Sheet1'); XLSX.writeFile(wb,'tabla.xlsx'); }
+  });
 
-jsonHistorySelect.addEventListener('change', () => {
-  const idx = jsonHistorySelect.value;
-  if(idx==='') return;
-  const selectedJson = jsonHistory[idx];
-  jsonin.value = selectedJson;
-  updateTableFromJson(selectedJson, {original:true});
+  jsonHistorySelect.addEventListener('change',()=>{ const idx=parseInt(jsonHistorySelect.value); if(!isNaN(idx)) { jsonin.value=jsonHistory[idx]; parseJsonInput(); } });
+
+  // Config panel
+  configBtn.addEventListener('click',()=>{ configPanel.style.display=configPanel.style.display==='block'?'none':'block'; });
+  configPanel.innerHTML=`
+    <label><input type="checkbox" id="darkModeChk"> Modo oscuro</label>
+  `;
+  const darkModeChk = document.getElementById('darkModeChk');
+  darkModeChk.addEventListener('change',()=>{ document.body.classList.toggle('dark', darkModeChk.checked); });
+  if(localStorage.getItem('darkMode')==='true'){ document.body.classList.add('dark'); darkModeChk.checked=true; }
+  darkModeChk.addEventListener('change',()=>{ localStorage.setItem('darkMode', darkModeChk.checked); });
+
+  // Inicializar
+  updateHistorySelect();
+  const last=localStorage.getItem('lastJson'); if(last){ jsonin.value=last; parseJsonInput(); }
 });
-
-/* ----- Sobrescribir updateTableFromJson para historial solo de JSON originales y último JSON ----- */
-const originalUpdate = updateTableFromJson;
-updateTableFromJson = function(raw, {original=true}={}) {
-  originalUpdate(raw);
-  if(original && !showRaw) {
-    addToHistory(raw);
-    localStorage.setItem('lastJson', raw); // Guardamos también el último JSON
-  }
-};
-
-/* ----- Restaurar último JSON al abrir la página ----- */
-const lastJson = localStorage.getItem('lastJson');
-if(lastJson) {
-  jsonin.value = lastJson;
-  updateTableFromJson(lastJson, {original:true});
-}
-
-/* ----- Modificar listener del textarea para historial correcto ----- */
-jsonin.addEventListener('input', ()=>updateTableFromJson(jsonin.value, {original:true}));
-
 </script>
+
+
+
 </body>
 </html>
