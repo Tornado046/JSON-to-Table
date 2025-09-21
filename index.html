@@ -1,309 +1,232 @@
 <!doctype html>
 <html lang="es">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>JSON → Tabla Mejorada (Móvil Friendly)</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JSON → Tabla Móvil Friendly</title>
 
 <style>
 :root {
-  --bg-color: #fff;
-  --text-color: #000;
-  --cell-even: #f9f9f9;
-  --cell-odd: #e8f0ff;
-  --header-bg: #f2f2f2;
-  --header-color: #111;
+  --bg-color: #fff; --text-color: #000;
+  --cell-even: #f9f9f9; --cell-odd: #e8f0ff;
+  --header-bg: #f2f2f2; --header-color: #111;
 }
 body.dark {
-  --bg-color: #1e1e1e;
-  --text-color: #eee;
-  --cell-even: #2a2a2a;
-  --cell-odd: #262626;
-  --header-bg: #333;
-  --header-color: #eee;
+  --bg-color: #1e1e1e; --text-color: #eee;
+  --cell-even: #2a2a2a; --cell-odd: #262626;
+  --header-bg: #333; --header-color: #eee;
 }
-* { box-sizing: border-box; }
+* { box-sizing: border-box; margin:0; padding:0; }
 body {
   font-family: system-ui, Segoe UI, Roboto, Arial, sans-serif;
-  margin: 0; color: var(--text-color); background: var(--bg-color);
-  display: flex; flex-direction: column; min-height: 100vh; transition: background 0.3s, color 0.3s;
+  color: var(--text-color); background: var(--bg-color);
+  display:flex; flex-direction:column; min-height:100vh;
+  transition: background 0.3s, color 0.3s;
 }
-textarea#jsonin { width: 100%; height: 140px; font-family: monospace; padding: 10px; font-size: 14px; background: #fff; color: #000; transition: background 0.3s, color 0.3s; border-radius:6px; }
-body.dark textarea#jsonin { background: #2a2a2a; color: #eee; }
-.row { display: flex; flex-wrap: wrap; gap: 8px; margin: 5px 10px; align-items: center; }
-button, input, select { padding: 6px 12px; border-radius: 6px; border: 1px solid #bbb; background: #fafafa; cursor: pointer; font-size: 14px; transition: background 0.3s, color 0.3s, border 0.3s; }
-body.dark button, body.dark input, body.dark select { background: #2a2a2a; color: #eee; border: 1px solid #666; }
-input[type=text], select { flex:1; min-width: 120px; }
-#tableWrap { flex: 1; overflow: auto; margin: 5px 10px 10px 10px; position: relative; max-height: 60vh; }
-table { border-collapse: collapse; font-family: monospace; font-size: 12px; width: 100%; min-width: 600px; }
-th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; white-space: nowrap; }
-th { position: sticky; top: 0; background: var(--header-bg); color: var(--header-color); z-index:2; cursor: pointer; }
-tr:nth-child(even) td { background: var(--cell-even); }
-tr:nth-child(odd) td { background: var(--cell-odd); }
-tr:hover td { background: #fff2cc; }
-.columnFilterContainer { display: flex; align-items: center; }
-.columnFilter { width: 60px; font-size: 12px; padding: 2px 4px; margin: 0 2px 0 0; }
-.clearBtn { color:red; cursor:pointer; display:none; font-size:12px; user-select:none; }
-.globalFilterContainer { display:flex; align-items:center; flex-wrap:wrap; gap:4px; margin:5px 10px; }
-.globalFilter { flex:1; min-width:140px; padding:4px 8px; font-size:14px; border-radius:6px; }
-.globalClearBtn { cursor:pointer; font-size:14px; color:red; user-select:none; display:inline-block; margin-left:4px; }
-#rawDisplay { display:none; height:160px; margin:5px 10px; padding:10px; font-family:monospace; font-size:12px; overflow:auto; border:1px solid #bbb; border-radius:6px; background:#fff; color:#000; white-space:pre; }
+.row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:5px 10px; }
+button, input, select { padding:6px 12px; border-radius:6px; border:1px solid #bbb; background:#fafafa; cursor:pointer; font-size:14px; transition:all 0.3s; }
+body.dark button, body.dark input, body.dark select { background:#2a2a2a; color:#eee; border:1px solid #666; }
+input, select { flex:1; min-width:120px; }
+textarea { width:100%; font-family: monospace; padding:10px; border-radius:6px; font-size:14px; }
+body.dark textarea { background:#2a2a2a; color:#eee; border:1px solid #666; }
+#tabs { display:flex; border-bottom:1px solid #ccc; margin:5px 10px; }
+.tab { flex:1; text-align:center; padding:8px 0; cursor:pointer; border-radius:6px 6px 0 0; background:#f2f2f2; }
+body.dark .tab { background:#333; color:#eee; }
+.tab.active { background:#d9edf7; font-weight:bold; }
+#content > div { display:none; padding:10px; flex:1; overflow:auto; }
+#content > div.active { display:block; }
+#tableWrap { overflow:auto; max-height:50vh; }
+table { border-collapse:collapse; font-family:monospace; font-size:12px; min-width:500px; width:100%; }
+th, td { border:1px solid #ccc; padding:6px 8px; white-space:nowrap; }
+th { position:sticky; top:0; background:var(--header-bg); color:var(--header-color); cursor:pointer; z-index:2; }
+tr:nth-child(even) td { background:var(--cell-even); }
+tr:nth-child(odd) td { background:var(--cell-odd); }
+tr:hover td { background:#fff2cc; }
+#rawDisplay { height:200px; overflow:auto; font-family:monospace; white-space:pre; border:1px solid #bbb; border-radius:6px; }
 body.dark #rawDisplay { background:#2a2a2a; color:#eee; border:1px solid #666; }
-.blink { background:#fffa8c !important; }
-#copyMsg { position: fixed; background: #d9edf7; padding:6px 10px; border-radius:6px; color:#000; display:none; z-index:9999; font-size:12px; top:10px; left:10px; }
+#copyMsg { position:fixed; top:10px; left:10px; background:#d9edf7; padding:6px 10px; border-radius:6px; font-size:12px; display:none; z-index:9999; }
 body.dark #copyMsg { background:#444; color:#fff; }
-#configPanel { display:none; position:absolute; top:40px; right:10px; background:#fafafa; border:1px solid #bbb; padding:10px; border-radius:6px; z-index:999; width:200px; box-shadow:0 2px 8px rgba(0,0,0,0.2); }
-body.dark #configPanel { background:#2a2a2a; border:1px solid #666; color:#eee; }
-#configPanel label { font-size:12px; margin-right:5px; }
-#toggleEditBtn { font-size:14px; padding:4px 8px; margin-left:4px; }
 @media(max-width:600px){
-  textarea#jsonin { font-size:12px; height:120px; }
   button, input, select { font-size:12px; padding:4px 8px; }
-  table { font-size:11px; min-width:500px; }
-  #tableWrap { max-height:50vh; }
+  textarea { font-size:12px; }
+  table { font-size:11px; }
 }
 </style>
+</head>
 
-<!-- ===================== BLOQUE 2: HTML ===================== -->
+<body>
 <div class="row">
-  <input type="text" id="urlIn" placeholder="Pega URL aquí..." />
+  <input type="text" id="urlIn" placeholder="Pega URL aquí...">
   <button id="fetchBtn">📡 Cargar URL</button>
   <button id="configBtn">⚙️ Config</button>
 </div>
 
-<div class="row">
-  <textarea id="jsonin" placeholder='Pega JSON aquí'></textarea>
+<div id="tabs">
+  <div class="tab active" data-tab="jsonTab">JSON</div>
+  <div class="tab" data-tab="tableTab">Tabla</div>
+  <div class="tab" data-tab="rawTab">Raw</div>
 </div>
 
-<div id="configPanel"></div>
-
-<div class="row">
-  <button id="clearBtn">Limpiar JSON</button>
+<div id="content">
+  <div id="jsonTab" class="active">
+    <textarea id="jsonin" placeholder="Pega JSON aquí"></textarea>
+    <button id="clearBtn">Limpiar JSON</button>
+  </div>
+  <div id="tableTab">
+    <div id="tableWrap"></div>
+    <div class="row">
+      <label>Separador:</label>
+      <select id="separatorSelect">
+        <option value="	">Tab</option>
+        <option value=";">;</option>
+        <option value=",">,</option>
+      </select>
+      <select id="downloadSelect">
+        <option value="">Descargar...</option>
+        <option value="csv">CSV</option>
+        <option value="xlsx">XLSX</option>
+        <option value="txt">TXT</option>
+      </select>
+      <button id="copyBtn">Copiar tabla</button>
+      <button id="toggleEditBtn">✏️ Editar</button>
+    </div>
+    <div class="row">
+      <input id="globalFilter" class="globalFilter" placeholder="Buscar en toda la tabla...">
+      <span id="globalClearBtn" class="globalClearBtn">✕</span>
+    </div>
+  </div>
+  <div id="rawTab">
+    <textarea id="rawDisplay" readonly></textarea>
+  </div>
 </div>
 
-<div class="row">
-  <label>Separador:</label>
-  <select id="separatorSelect">
-    <option value="	">Tab</option>
-    <option value=";">;</option>
-    <option value=",">,</option>
-  </select>
-
-  <select id="downloadSelect">
-    <option value="">Descargar...</option>
-    <option value="csv">CSV</option>
-    <option value="xlsx">XLSX</option>
-    <option value="txt">TXT</option>
-  </select>
-
-  <button id="toggleRawBtn">Mostrar Raw</button>
-  <button id="copyBtn">Copiar tabla</button>
-</div>
-
-<div class="globalFilterContainer">
-  <input id="globalFilter" class="globalFilter" placeholder="Buscar en toda la tabla..." />
-  <span id="globalClearBtn" class="globalClearBtn">✕</span>
-  <button id="toggleEditBtn">✏️ Editar</button>
-  <select id="jsonHistorySelect">
-    <option value="">-- Seleccionar JSON --</option>
-  </select>
-</div>
-
-<textarea id="rawDisplay" readonly></textarea>
 <div id="copyMsg">Copiado al portapapeles</div>
-<div id="tableWrap"></div>
 
-<!-- ===================== BLOQUE 3: JS ===================== -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', ()=>{
-  const jsonin=document.getElementById('jsonin');
-  const tableWrap=document.getElementById('tableWrap');
-  const downloadSelect=document.getElementById('downloadSelect');
-  const copyBtn=document.getElementById('copyBtn');
-  const clearBtn=document.getElementById('clearBtn');
-  const urlIn=document.getElementById('urlIn');
-  const fetchBtn=document.getElementById('fetchBtn');
-  const separatorSelect=document.getElementById('separatorSelect');
-  const globalFilter=document.getElementById('globalFilter');
-  const globalClearBtn=document.getElementById('globalClearBtn');
-  const toggleRawBtn=document.getElementById('toggleRawBtn');
-  const rawDisplay=document.getElementById('rawDisplay');
-  const toggleEditBtn=document.getElementById('toggleEditBtn');
-  const jsonHistorySelect=document.getElementById('jsonHistorySelect');
-  const configBtn=document.getElementById('configBtn');
-  const configPanel=document.getElementById('configPanel');
-
-  window.currentRows=[];
-  let currentHeaders=[], sortState={}, showRaw=false, editing=false;
-  let lastJson=null;
-  let jsonHistory = JSON.parse(localStorage.getItem('jsonHistory')||'[]');
-
-  function isObj(x){ return x && typeof x==='object' && !Array.isArray(x); }
-  function flattenObject(obj,prefix='',out={}) {
-    if(Array.isArray(obj)){ out[prefix.slice(0,-1)||'array']=JSON.stringify(obj); return out; }
-    for(const k of Object.keys(obj||{})){
-      const v=obj[k], key=prefix+k+'.';
-      if(isObj(v)) flattenObject(v,key,out);
-      else if(Array.isArray(v)) out[key.slice(0,-1)] = JSON.stringify(v);
-      else out[key.slice(0,-1)] = v;
-    }
-    return out;
-  }
-  function getRowsFromJson(parsed){
-    if(Array.isArray(parsed)) return parsed.map(o => flattenObject(o));
-    for(const k of Object.keys(parsed)){ if(Array.isArray(parsed[k])) return parsed[k].map(o=>flattenObject(o)); }
-    return [flattenObject(parsed)];
-  }
-  function escRegex(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
-  function rowsToCsv(rows, sep){
-    if(!rows || !rows.length) return '';
-    const allKeys = new Set();
-    rows.forEach(r=>Object.keys(r).forEach(k=>allKeys.add(k)));
-    const headers = Array.from(allKeys);
-    const actualSep = sep==='\\t'?'\t':sep;
-    const esc = v=>{
-      if(v==null) return '';
-      const s=String(v);
-      if(new RegExp('["\\n'+escRegex(actualSep)+']').test(s) || s.includes('\r')) return '"'+s.replace(/"/g,'""')+'"';
-      return s;
-    };
-    const lines=[headers.join(actualSep)];
-    for(const r of rows) lines.push(headers.map(h=>esc(r[h])).join(actualSep));
-    return lines.join('\n');
-  }
-
-  function parseJsonInput(){
-    let parsed;
-    try { parsed = JSON.parse(jsonin.value); }
-    catch(e){ tableWrap.innerHTML=''; toggleRawBtn.disabled=true; downloadSelect.disabled=true; copyBtn.disabled=true; return; }
-    lastJson = parsed;
-    window.currentRows = getRowsFromJson(parsed);
-    const allKeys = new Set(); window.currentRows.forEach(r=>Object.keys(r).forEach(k=>allKeys.add(k))); currentHeaders = Array.from(allKeys);
-    renderTable();
-    const hasRows = window.currentRows.length>0;
-    toggleRawBtn.disabled = !hasRows;
-    updateDownloadCopyButtons(hasRows);
-    if(hasRows) addToHistory(jsonin.value);
-    if(hasRows) localStorage.setItem('lastJson', jsonin.value);
-  }
-
-  function updateDownloadCopyButtons(enabled){ copyBtn.disabled=!enabled; downloadSelect.disabled=!enabled; }
-
-  function renderFilteredTbody(rows, highlightCol=null){
-    const tbody = tableWrap.querySelector('tbody');
-    if(!tbody) return;
-    tbody.innerHTML='';
-    const headers = currentHeaders || [];
-    rows.forEach(r=>{
-      const tr=document.createElement('tr');
-      headers.forEach(h=>{
-        const td=document.createElement('td'); td.textContent = r[h]!==undefined?r[h]:''; tr.appendChild(td);
-      });
-      tbody.appendChild(tr);
-    });
-    if(highlightCol){
-      const idx = headers.indexOf(highlightCol);
-      if(idx>=0){
-        tbody.querySelectorAll('tr').forEach(tr=>{
-          const td=tr.children[idx];
-          if(td){ td.classList.add('blink'); setTimeout(()=>td.classList.remove('blink'),150); }
-        });
-      }
-    }
-  }
-
-  function renderTable(){
-    tableWrap.innerHTML=''; if(!window.currentRows.length){ updateDownloadCopyButtons(false); return; }
-    const tbl=document.createElement('table'); const thead=document.createElement('thead');
-    const trh=document.createElement('tr');
-    currentHeaders.forEach(h=>{
-      const th=document.createElement('th'); th.textContent=h; th.style.minWidth='80px';
-      th.addEventListener('click', ()=>sortColumn(h)); trh.appendChild(th);
-    });
-    thead.appendChild(trh);
-    // Filtros por columna
-    const trFilters=document.createElement('tr');
-    currentHeaders.forEach(h=>{
-      const th=document.createElement('th'); th.style.padding='2px'; th.style.minWidth='80px';
-      const inputContainer=document.createElement('div'); inputContainer.style.display='flex'; inputContainer.style.alignItems='center'; inputContainer.style.justifyContent='space-between';
-      const input=document.createElement('input'); input.type='text'; input.placeholder='🔍'; input.className='columnFilter';
-      input.style.flex='1'; input.style.fontSize='11px'; input.style.padding='2px 4px'; input.style.boxSizing='border-box'; input.style.cursor='text';
-      const clearX=document.createElement('span'); clearX.textContent='✕'; clearX.className='clearBtn'; clearX.style.display='none';
-      clearX.style.cursor='pointer'; clearX.style.marginLeft='4px'; clearX.style.flex='0 0 auto';
-      input.addEventListener('input',()=>{ const val=input.value.toLowerCase(); const filtered=window.currentRows.filter(r=>r[h]!==undefined && String(r[h]).toLowerCase().includes(val)); renderFilteredTbody(filtered,h); clearX.style.display = val?'inline':'none'; });
-      clearX.addEventListener('click',()=>{ input.value=''; input.focus(); clearX.style.display='none'; renderFilteredTbody(window.currentRows); });
-      inputContainer.appendChild(input); inputContainer.appendChild(clearX); th.appendChild(inputContainer); trFilters.appendChild(th);
-    });
-    thead.appendChild(trFilters); tbl.appendChild(thead); tbl.appendChild(document.createElement('tbody')); tableWrap.appendChild(tbl);
-    renderFilteredTbody(window.currentRows);
-  }
-
-  function sortColumn(header){
-    const dir = sortState[header]==='asc'?'desc':'asc'; sortState[header]=dir;
-    window.currentRows.sort((a,b)=>{
-      const va=a[header]??''; const vb=b[header]??''; if(va===vb) return 0;
-      if(dir==='asc') return va>vb?1:-1; else return va>vb?-1:1;
-    });
-    renderTable();
-  }
-
-  function addToHistory(jsonStr){
-    if(jsonHistory.includes(jsonStr)) return;
-    jsonHistory.unshift(jsonStr);
-    if(jsonHistory.length>20) jsonHistory.pop();
-    localStorage.setItem('jsonHistory', JSON.stringify(jsonHistory));
-    updateHistorySelect();
-  }
-
-  function updateHistorySelect(){
-    jsonHistorySelect.innerHTML='<option value="">-- Seleccionar JSON --</option>';
-    jsonHistory.forEach((j,i)=>{ const opt=document.createElement('option'); opt.value=i; opt.textContent='JSON '+(i+1); jsonHistorySelect.appendChild(opt); });
-  }
-
-  function showRawData(){ rawDisplay.style.display=showRaw?'block':'none'; if(showRaw) rawDisplay.value=rowsToCsv(window.currentRows, separatorSelect.value); }
-
-  // Eventos
-  jsonin.addEventListener('input', parseJsonInput);
-  clearBtn.addEventListener('click',()=>{ jsonin.value=''; parseJsonInput(); });
-  fetchBtn.addEventListener('click',()=>{
-    if(!urlIn.value) return;
-    fetch(urlIn.value).then(r=>r.json()).then(data=>{ jsonin.value=JSON.stringify(data,null,2); parseJsonInput(); }).catch(console.error);
+// --------------------- TABS ---------------------
+const tabs = document.querySelectorAll('.tab');
+const contents = document.querySelectorAll('#content > div');
+tabs.forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    tabs.forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    contents.forEach(c=>c.classList.remove('active'));
+    document.getElementById(tab.dataset.tab).classList.add('active');
   });
-  separatorSelect.addEventListener('change',()=>{ if(showRaw) rawDisplay.value=rowsToCsv(window.currentRows, separatorSelect.value); });
-  toggleRawBtn.addEventListener('click',()=>{ showRaw=!showRaw; toggleRawBtn.textContent = showRaw?'Ocultar Raw':'Mostrar Raw'; showRawData(); });
-  globalFilter.addEventListener('input',()=>{ const val=globalFilter.value.toLowerCase(); const filtered=window.currentRows.filter(r=>Object.values(r).some(v=>String(v).toLowerCase().includes(val))); renderFilteredTbody(filtered); globalClearBtn.style.display=val?'inline':'none'; });
-  globalClearBtn.addEventListener('click',()=>{ globalFilter.value=''; renderFilteredTbody(window.currentRows); globalClearBtn.style.display='none'; });
-  toggleEditBtn.addEventListener('click',()=>{ editing=!editing; toggleEditBtn.textContent=editing?'✔️ Guardar':'✏️ Editar'; tableWrap.querySelectorAll('td').forEach(td=>{ td.contentEditable=editing; td.style.background=editing?'#fff3cf':''; }); });
-  copyBtn.addEventListener('click',()=>{
-    const txt=rowsToCsv(window.currentRows, separatorSelect.value);
-    navigator.clipboard.writeText(txt).then(()=>{ const msg=document.getElementById('copyMsg'); msg.style.display='block'; msg.style.top='10px'; msg.style.left='10px'; setTimeout(()=>msg.style.display='none',800); });
-  });
-  downloadSelect.addEventListener('change', ()=>{
-    const val=downloadSelect.value; if(!val) return; downloadSelect.value='';
-    if(val==='txt' || val==='csv'){ const blob=new Blob([rowsToCsv(window.currentRows, separatorSelect.value)],{type:'text/plain'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='tabla.'+val; a.click(); URL.revokeObjectURL(a.href); }
-    else if(val==='xlsx'){ const wb=XLSX.utils.book_new(); const ws=XLSX.utils.json_to_sheet(window.currentRows); XLSX.utils.book_append_sheet(wb,ws,'Sheet1'); XLSX.writeFile(wb,'tabla.xlsx'); }
-  });
-
-  jsonHistorySelect.addEventListener('change',()=>{ const idx=parseInt(jsonHistorySelect.value); if(!isNaN(idx)) { jsonin.value=jsonHistory[idx]; parseJsonInput(); } });
-
-  // Config panel
-  configBtn.addEventListener('click',()=>{ configPanel.style.display=configPanel.style.display==='block'?'none':'block'; });
-  configPanel.innerHTML=`
-    <label><input type="checkbox" id="darkModeChk"> Modo oscuro</label>
-  `;
-  const darkModeChk = document.getElementById('darkModeChk');
-  darkModeChk.addEventListener('change',()=>{ document.body.classList.toggle('dark', darkModeChk.checked); });
-  if(localStorage.getItem('darkMode')==='true'){ document.body.classList.add('dark'); darkModeChk.checked=true; }
-  darkModeChk.addEventListener('change',()=>{ localStorage.setItem('darkMode', darkModeChk.checked); });
-
-  // Inicializar
-  updateHistorySelect();
-  const last=localStorage.getItem('lastJson'); if(last){ jsonin.value=last; parseJsonInput(); }
 });
+
+// --------------------- JSON / Tabla / Raw ---------------------
+const jsonin = document.getElementById('jsonin');
+const tableWrap = document.getElementById('tableWrap');
+const rawDisplay = document.getElementById('rawDisplay');
+const copyBtn = document.getElementById('copyBtn');
+const separatorSelect = document.getElementById('separatorSelect');
+const downloadSelect = document.getElementById('downloadSelect');
+const toggleEditBtn = document.getElementById('toggleEditBtn');
+const globalFilter = document.getElementById('globalFilter');
+const globalClearBtn = document.getElementById('globalClearBtn');
+let currentRows=[], currentHeaders=[], editing=false;
+
+function isObj(x){ return x && typeof x==='object' && !Array.isArray(x); }
+function flattenObject(obj,prefix='',out={}) {
+  if(Array.isArray(obj)){ out[prefix.slice(0,-1)||'array']=JSON.stringify(obj); return out; }
+  for(const k of Object.keys(obj||{})){
+    const v=obj[k], key=prefix+k+'.';
+    if(isObj(v)) flattenObject(v,key,out);
+    else if(Array.isArray(v)) out[key.slice(0,-1)] = JSON.stringify(v);
+    else out[key.slice(0,-1)] = v;
+  }
+  return out;
+}
+function getRowsFromJson(parsed){
+  if(Array.isArray(parsed)) return parsed.map(o => flattenObject(o));
+  for(const k of Object.keys(parsed)){
+    if(Array.isArray(parsed[k])) return parsed[k].map(o=>flattenObject(o));
+  }
+  return [flattenObject(parsed)];
+}
+function parseJsonInput(){
+  let parsed;
+  try { parsed = JSON.parse(jsonin.value); }
+  catch(e){ tableWrap.innerHTML=''; return; }
+  currentRows = getRowsFromJson(parsed);
+  const allKeys = new Set();
+  currentRows.forEach(r=>Object.keys(r).forEach(k=>allKeys.add(k)));
+  currentHeaders = Array.from(allKeys);
+  renderTable();
+  updateRaw();
+}
+function renderTable(){
+  tableWrap.innerHTML='';
+  if(!currentRows.length) return;
+  const tbl = document.createElement('table');
+  const thead = document.createElement('thead');
+  const trh = document.createElement('tr');
+  currentHeaders.forEach(h=>{
+    const th = document.createElement('th');
+    th.textContent=h; th.style.minWidth='80px';
+    th.addEventListener('click', ()=>sortColumn(h));
+    trh.appendChild(th);
+  });
+  thead.appendChild(trh);
+  tbl.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  currentRows.forEach(r=>{
+    const tr=document.createElement('tr');
+    currentHeaders.forEach(h=>{
+      const td=document.createElement('td');
+      td.textContent=r[h]!==undefined?r[h]:'';
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  tbl.appendChild(tbody);
+  tableWrap.appendChild(tbl);
+}
+function sortColumn(header){
+  currentRows.sort((a,b)=>String(a[header]||'').localeCompare(String(b[header]||'')));
+  renderTable();
+}
+function rowsToCsv(rows,sep){
+  if(!rows.length) return '';
+  const headers = Object.keys(rows[0]);
+  const lines=[headers.join(sep)];
+  rows.forEach(r=>{
+    lines.push(headers.map(h=>String(r[h]||'')).join(sep));
+  });
+  return lines.join('\n');
+}
+function updateRaw(){ rawDisplay.value = jsonin.value; }
+function copyTable(){
+  if(!currentRows.length) return;
+  const tbl = tableWrap.querySelector('table');
+  if(!tbl) return;
+  const range = document.createRange();
+  range.selectNode(tbl);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+  document.execCommand('copy');
+  sel.removeAllRanges();
+  const msg = document.getElementById('copyMsg');
+  msg.style.display='block';
+  setTimeout(()=>msg.style.display='none',800);
+}
+
+// --------------------- EVENTOS ---------------------
+jsonin.addEventListener('input', parseJsonInput);
+document.getElementById('clearBtn').addEventListener('click', ()=>{ jsonin.value=''; parseJsonInput(); });
+copyBtn.addEventListener('click', copyTable);
+globalFilter.addEventListener('input', ()=>{
+  const val = globalFilter.value.toLowerCase();
+  currentRows.forEach((r,i)=>{
+    const tr = tableWrap.querySelectorAll('tbody tr')[i];
+    tr.style.display = currentHeaders.some(h=>String(r[h]||'').toLowerCase().includes(val))?'':'none';
+  });
+});
+globalClearBtn.addEventListener('click', ()=>{ globalFilter.value=''; globalFilter.dispatchEvent(new Event('input')); });
+toggleEditBtn.addEventListener('click', ()=>{ editing=!editing; tableWrap.querySelectorAll('td').forEach(td=>td.contentEditable=editing); });
 </script>
-
-
-
 </body>
 </html>
