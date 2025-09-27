@@ -5,355 +5,966 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>JSON → Tabla Mejorada</title>
 
-<!-- ===================== BLOQUE 1: CSS principal ===================== -->
+<!-- Módulo 1.1 - Tipografía y estilos base -->
+<link href="https://fonts.googleapis.com/css?family=Inter:400,700&display=swap" rel="stylesheet">
+
 <style>
-:root {
-  --bg-color: #fff;
-  --text-color: #000;
-  --cell-even: #f9f9f9;
-  --cell-odd: #e8f0ff;
-  --header-bg: #f2f2f2;
-  --header-color: #111;
+/* Módulo 1.2 - Variables y tema */
+:root{
+  --bg:#ffffff; --fg:#111111; --header-bg:#f2f2f2; --muted:#888;
+  --cell-even:#f9f9f9; --cell-odd:#eef3ff; --accent:#2979ff;
+  --input-border:#bbb; --error:#e53935;
+  --th-height:40px;
+  --row-height:32px;
+  --font-main: 'Inter', system-ui, Arial, sans-serif;
+}
+body.dark{
+  --bg:#141414; --fg:#eee; --header-bg:#222; --muted:#aaa;
+  --cell-even:#252525; --cell-odd:#202020; --accent:#2979ff;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; font-family:var(--font-main); color:var(--fg);
+  background:var(--bg); -webkit-font-smoothing:antialiased;
 }
 
-body.dark {
-  --bg-color: #1e1e1e;
-  --text-color: #eee;
-  --cell-even: #2a2a2a;
-  --cell-odd: #262626;
-  --header-bg: #333;
-  --header-color: #eee;
+/* Módulo 1.3 - Layout */
+.container{padding:12px;}
+.row{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+
+/* Módulo 1.4 - Inputs y botones */
+input[type=text], textarea, select, button{
+  font-family:var(--font-main);
+  font-size:14px;
 }
-
-* { box-sizing: border-box; }
-
-body {
-  font-family: system-ui, Segoe UI, Roboto, Arial, sans-serif;
-  margin: 0;
-  color: var(--text-color);
-  background: var(--bg-color);
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  transition: background 0.3s, color 0.3s;
+textarea#jsonin{
+  width:100%; min-height:160px; padding:10px; border:2px solid var(--input-border);
+  border-radius:6px; resize:vertical; background:inherit; color:inherit;
 }
+textarea#jsonin.error{ border-color:var(--error); box-shadow:0 0 6px rgba(229,57,53,0.18); }
+input[type=text]{padding:6px;border-radius:6px;border:1px solid var(--input-border)}
+button{padding:6px 10px;border-radius:6px;border:1px solid var(--input-border);background:#f2f6ff;cursor:pointer}
+button:disabled{background:#f0f0f0;color:var(--muted);cursor:not-allowed}
 
-textarea, input, select, button {
-  transition: background 0.3s, color 0.3s, border 0.3s;
+/* Módulo 1.5 - Drawer (configuración) */
+#drawer{
+  position:fixed; right:-100%; top:0; width:360px; height:100vh; background:var(--header-bg);
+  box-shadow:0 6px 24px rgba(0,0,0,0.12); transition:right .28s; z-index:9999; padding:12px; overflow:auto;
 }
+#drawer.open{ right:0; }
+.tab-bar{display:flex;gap:6px;margin-bottom:12px}
+.tab-btn{flex:1;padding:10px;border-radius:8px;border:0;background:#eee;cursor:pointer}
+.tab-btn.active{background:var(--accent);color:#fff}
 
-textarea#jsonin {
-  width: 100%;
-  height: 160px;
-  font-family: monospace;
-  padding: 10px;
-  font-size: 12px;
-  background: #fff;
-  color: #000;
-  resize: vertical;
-}
-body.dark textarea#jsonin { background:#2a2a2a; color:#eee; }
+/* Módulo 1.6 - Table area: mantiene su propio scroll (tabla con scroll) */
+#tableWrap{ width:100%; margin-top:10px; border-radius:8px; border:1px solid #e6e6e6; background:transparent; min-height:200px; max-height:420px; overflow:auto }
 
-.row { display:flex; flex-wrap:wrap; gap:10px; margin:5px 10px; align-items:center; }
+/* Módulo 1.7 - Table styles y sticky headers */
+table{border-collapse:collapse;width:100%}
+th, td{padding:6px 8px;border:1px solid #e2e2e2; white-space:nowrap; font-family:monospace; font-size:13px; height:var(--row-height)}
+thead th{height:var(--th-height); background:var(--header-bg); position:sticky; top:0; z-index:4}
+thead tr.filter-row th{ top: calc(var(--th-height)); background:#fbfbfb; z-index:5 } /* Módulo 1.7.1 - evita overlap */
+tbody tr:nth-child(even) td{background:var(--cell-even)}
+tbody tr:nth-child(odd) td{background:var(--cell-odd)}
+th.order-asc::after{ content:" ↑"; color:var(--accent); font-weight:bold }
+th.order-desc::after{ content:" ↓"; color:var(--accent); font-weight:bold }
 
-button, input, select {
-  padding: 4px 8px;
-  border-radius: 4px;
-  border: 1px solid #bbb;
-  background: #fafafa;
-  cursor: pointer;
-  font-size: 12px;
-}
-body.dark button, body.dark input, body.dark select {
-  background: #2a2a2a; color:#eee; border:1px solid #666;
-}
+/* Módulo 1.8 - Column filter input wrapper */
+.filter-col-wrap{ position:relative; }
+.filter-col{ width:100%; box-sizing:border-box; padding-right:28px; border-radius:4px; padding:4px 8px; }
 
-#tableWrap { flex:1; overflow:auto; margin:5px 10px 10px 10px; }
+/* Módulo 1.9 - Clear (X) inside inputs - global and column */
+.clear-btn{ position:absolute; right:6px; top:50%; transform:translateY(-50%); border:0;background:transparent;color:var(--muted); cursor:pointer;font-size:14px;padding:2px; }
+.clear-btn:focus{outline:2px solid rgba(41,121,255,0.12)}
 
-table {
-  border-collapse: collapse;
-  font-family: monospace;
-  font-size: 12px;
-  width: 100%;
-}
-th, td {
-  border: 1px solid #ccc;
-  padding: 6px 8px;
-  text-align: left;
-  white-space: nowrap;
-  color: var(--text-color);
-}
-th { position: sticky; top:0; background: var(--header-bg); color: var(--header-color); z-index:2; cursor:pointer; }
-tr:nth-child(even) td { background: var(--cell-even); }
-tr:nth-child(odd) td { background: var(--cell-odd); }
-tr:hover td { background: #fff2cc; }
+/* Módulo 1.10 - Editable cell visual effect */
+.editable-cell{ background:#fffbe7 !important; border:1px dashed var(--accent) !important; box-shadow:0 0 0 3px rgba(41,121,255,0.06); }
+td.editable-cell:focus{ outline:2px solid rgba(41,121,255,0.16); }
 
-.columnFilterContainer { position: relative; display: flex; align-items:center; }
-.columnFilter { width:70px; font-size:11px; padding:2px 18px 2px 4px; margin:2px 4px 0 0; }
-.clearBtn { position:absolute; right:2px; top:50%; transform:translateY(-50%); color:red; cursor:pointer; display:none; font-size:12px; }
+/* Módulo 1.11 - Raw area */
+#rawDisplay{display:none;width:100%;min-height:160px;padding:10px;border:2px solid var(--input-border);border-radius:6px;white-space:pre;overflow:auto;background:inherit;color:inherit}
 
-.globalFilterContainer { display:flex; gap:4px; align-items:center; margin:5px 10px; }
-.globalFilter { width:200px; padding:4px 8px; border-radius:4px; font-size:12px; }
-.globalClearBtn { font-size:12px; color:red; cursor:pointer; user-select:none; }
-
-#rawDisplay {
-  display:none;
-  margin:5px 10px;
-  padding:10px;
-  font-family: monospace;
-  font-size:12px;
-  overflow:auto;
-  border:1px solid #bbb;
-  background:#fff; color:#000;
-}
-body.dark #rawDisplay { background:#2a2a2a; color:#eee; border:1px solid #666; }
-
-.blink { background:#fffa8c !important; }
-
-#copyMsg {
-  position:fixed;
-  background:#d9edf7;
-  padding:6px 10px;
-  border-radius:6px;
-  color:#000;
-  display:none;
-  z-index:9999;
-  font-size:12px;
-  transition: top 0.2s, left 0.2s, opacity 0.2s;
-}
-body.dark #copyMsg { background:#444; color:#fff; }
-
-#configPanel, #customThemePanel {
-  display:none;
-  position:absolute;
-  top:40px;
-  right:10px;
-  background:#fafafa;
-  border:1px solid #bbb;
-  padding:10px;
-  border-radius:6px;
-  z-index:999;
-  width:200px;
-  box-shadow:0 2px 8px rgba(0,0,0,0.2);
-}
-body.dark #configPanel, body.dark #customThemePanel { background:#2a2a2a; border:1px solid #666; color:#eee; }
-
-@media screen and (max-width:767px){
-  #tableWrap { font-size:10px; }
-  .row { flex-direction: column; gap:6px; }
-  .globalFilter { width:100%; }
-  button, input, select { font-size:11px; padding:4px 6px; }
+/* Responsive adjustments */
+@media (max-width:720px){
+  #drawer{width:100vw}
+  thead tr.filter-row th{ top: calc(var(--th-height) + 2px) }
 }
 </style>
 </head>
 <body>
+<div class="container">
+  <!-- Módulo 2.1 - Controles superiores -->
+  <div class="row" id="topControls">
+    <input type="text" id="urlIn" placeholder="Pega URL aquí..." aria-label="Pegar URL" style="flex:1">
+    <button id="fetchBtn" aria-label="Cargar URL">Cargar URL</button>
+    <button id="configBtn" aria-label="Abrir configuración">⚙️ Config</button>
+  </div>
 
-<!-- ===================== BLOQUE 2: Controles principales ===================== -->
-<div class="row">
-  <input type="text" id="urlIn" placeholder="Pega URL aquí..." />
-  <button id="fetchBtn">📡 Cargar URL</button>
-  <button id="configBtn">⚙️ Config</button>
+  <!-- Módulo 2.2 - Área JSON -->
+  <div class="row">
+    <textarea id="jsonin" aria-label="Área JSON" placeholder="Pega o escribe JSON aquí"></textarea>
+  </div>
+
+  <!-- Módulo 2.3 - Acciones -->
+  <div class="row">
+    <button id="clearBtn" aria-label="Limpiar JSON">Limpiar JSON</button>
+
+    <label style="display:flex;align-items:center;gap:6px">
+      Separador:
+      <select id="separatorSelect" aria-label="Separador">
+        <option value="	">Tab</option>
+        <option value=",">,</option>
+        <option value=";">;</option>
+      </select>
+    </label>
+
+    <select id="downloadSelect" aria-label="Descargar" disabled>
+      <option value="">Descargar...</option>
+      <option value="csv">CSV</option>
+      <option value="xlsx">XLSX</option>
+      <option value="txt">TXT</option>
+    </select>
+
+    <button id="toggleRawBtn" disabled aria-label="Mostrar raw">Mostrar Raw</button>
+    <button id="copyBtn" disabled aria-label="Copiar tabla">Copiar tabla</button>
+  </div>
+
+  <!-- Módulo 2.4 - Filtro global + botón editar -->
+  <div class="row" style="align-items:center; margin-top:10px;">
+    <div style="position:relative;flex:1;">
+      <input type="text" id="filterGlobal" class="filter-global" placeholder="Filtro global..." autocomplete="off" style="width:100%;padding:8px 36px;border-radius:6px;border:1px solid var(--input-border)" />
+      <button id="filterGlobalClearBtn" class="clear-btn" title="Limpiar filtro global">✕</button>
+    </div>
+    <button id="editBtn" aria-label="Editar tabla" disabled>✏️ Editar</button>
+  </div>
+
+  <!-- Módulo 2.5 - Wrapper de tabla (CON SCROLL propio para sticky headers) -->
+  <div id="tableWrap" aria-live="polite">
+    <!-- la tabla se renderiza aquí -->
+  </div>
+
+  <!-- Módulo 2.6 - Área raw -->
+  <div style="margin-top:8px">
+    <textarea id="rawDisplay" readonly aria-label="Raw CSV"></textarea>
+  </div>
 </div>
 
-<div class="row">
-  <textarea id="jsonin" placeholder="Pega JSON aquí"></textarea>
+<!-- Módulo 3.1 - Drawer / Configuración -->
+<div id="drawer" role="dialog" aria-label="Configuración">
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tabConfig">Configuración</button>
+    <button class="tab-btn" id="tabCustom">Tema personalizado</button>
+  </div>
+
+  <!-- Módulo 3.2 - Contenido Configuración -->
+  <div id="configContent" class="active">
+    <!-- Módulo 3.2.1 - Tema rápido -->
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <button id="themeLight" title="Modo claro">🌞</button>
+      <button id="themeDark" title="Modo oscuro">🌙</button>
+    </div>
+
+    <!-- Módulo 3.2.2 - Idioma -->
+    <label>Idioma:
+      <select id="languageSelect" style="width:100%;margin-top:6px">
+        <option value="es">Español</option>
+        <option value="en">English</option>
+      </select>
+    </label>
+
+    <!-- Módulo 3.2.3 - Historial -->
+    <div style="margin-top:12px;">
+      <label>Historial JSON:
+        <select id="jsonHistorySelect" style="width:100%;margin-top:6px">
+          <option value="">-- Seleccionar JSON --</option>
+        </select>
+      </label>
+      <div style="display:flex;gap:6px;margin-top:6px;">
+        <button id="renameHistoryBtn">Renombrar</button>
+        <button id="deleteHistoryBtn" disabled>Eliminar</button>
+      </div>
+    </div>
+
+    <!-- Módulo 3.2.4 - Web/Móvil -->
+    <div style="margin-top:12px;">
+      <button id="mobileSwitchBtn">Web / Móvil</button>
+    </div>
+  </div>
+
+  <!-- Módulo 3.3 - Panel Tema Personalizado -->
+  <div id="customPanel" style="display:none;">
+    <h4>Personalizar tema</h4>
+    <label>Fondo: <input type="color" id="bgColor"></label>
+    <label>Texto: <input type="color" id="textColor"></label>
+    <label>Tipografía: <input type="text" id="fontFamily" placeholder="Inter, Arial"></label>
+    <label>Celdas pares: <input type="color" id="cellEven"></label>
+    <label>Celdas impares: <input type="color" id="cellOdd"></label>
+    <div style="margin-top:8px">
+      <button id="customDefaultBtn">Default</button>
+    </div>
+  </div>
 </div>
 
-<div class="row">
-  <button id="clearBtn">Limpiar JSON</button>
-</div>
-
-<div class="row">
-  <label>Separador:</label>
-  <select id="separatorSelect"><option value="\t">Tab</option><option value=";">;</option><option value=",">,</option></select>
-  <select id="downloadSelect"><option value="">Descargar...</option><option value="csv">CSV</option><option value="xlsx">XLSX</option><option value="txt">TXT</option></select>
-  <button id="toggleRawBtn">Mostrar Raw</button>
-  <button id="copyBtn">Copiar tabla</button>
-</div>
-
-<div id="globalFilterContainer" class="globalFilterContainer">
-  <input id="globalFilter" class="globalFilter" placeholder="Buscar en toda la tabla..." />
-  <span id="globalClearBtn" class="globalClearBtn">✕</span>
-  <button id="toggleEditBtn">✏️ Editar</button>
-</div>
-
-<div id="tableWrap"></div>
-<textarea id="rawDisplay" readonly></textarea>
-<div id="copyMsg">Copiado al portapapeles</div>
-
-<div id="configPanel">
-  <button id="themeToggleBtn">🌓 Dark/Light</button>
-  <button id="customThemeBtn">🎨 Tema</button>
-</div>
-
-<div id="customThemePanel">
-  <div><label>Fondo:</label><input type="color" id="bgColorInput"></div>
-  <div><label>Texto:</label><input type="color" id="textColorInput"></div>
-  <div><label>Fuente:</label><input type="text" id="fontInput" placeholder="monospace"></div>
-  <div><label>Celdas pares:</label><input type="color" id="cellColorEvenInput"></div>
-  <div><label>Celdas impares:</label><input type="color" id="cellColorOddInput"></div>
-  <button id="applyThemeBtn">Aplicar</button>
-  <button id="resetThemeBtn">Resetear</button>
-  <button id="backToConfigBtn">Volver</button>
-</div>
-
-<!-- ===================== BLOQUE 3: JS ===================== -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- Módulo 4.1 - Script principal (comentarios numerados en español) -->
 <script>
-// --- Variables globales ---
-const jsonin=document.getElementById('jsonin');
-const tableWrap=document.getElementById('tableWrap');
-const downloadSelect=document.getElementById('downloadSelect');
-const copyBtn=document.getElementById('copyBtn');
-const clearBtn=document.getElementById('clearBtn');
-const urlIn=document.getElementById('urlIn');
-const fetchBtn=document.getElementById('fetchBtn');
-const separatorSelect=document.getElementById('separatorSelect');
-const globalFilter=document.getElementById('globalFilter');
-const globalClearBtn=document.getElementById('globalClearBtn');
-const toggleRawBtn=document.getElementById('toggleRawBtn');
-const rawDisplay=document.getElementById('rawDisplay');
-const copyMsg=document.getElementById('copyMsg');
-const toggleEditBtn=document.getElementById('toggleEditBtn');
-const configBtn=document.getElementById('configBtn');
-const configPanel=document.getElementById('configPanel');
-const customThemePanel=document.getElementById('customThemePanel');
-const customThemeBtn=document.getElementById('customThemeBtn');
-const themeToggleBtn=document.getElementById('themeToggleBtn');
-const applyThemeBtn=document.getElementById('applyThemeBtn');
-const resetThemeBtn=document.getElementById('resetThemeBtn');
-const backToConfigBtn=document.getElementById('backToConfigBtn');
+/* Módulo 4.1 - Variables globales (4.1.1 Dom, 4.1.2 Estado) */
+const el = {
+  urlIn: document.getElementById('urlIn'),
+  fetchBtn: document.getElementById('fetchBtn'),
+  configBtn: document.getElementById('configBtn'),
+  jsonin: document.getElementById('jsonin'),
+  clearBtn: document.getElementById('clearBtn'),
+  downloadSelect: document.getElementById('downloadSelect'),
+  separatorSelect: document.getElementById('separatorSelect'),
+  toggleRawBtn: document.getElementById('toggleRawBtn'),
+  copyBtn: document.getElementById('copyBtn'),
+  filterGlobal: document.getElementById('filterGlobal'),
+  filterGlobalClearBtn: document.getElementById('filterGlobalClearBtn'),
+  editBtn: document.getElementById('editBtn'),
+  tableWrap: document.getElementById('tableWrap'),
+  rawDisplay: document.getElementById('rawDisplay'),
+  drawer: document.getElementById('drawer'),
+  tabConfig: document.getElementById('tabConfig'),
+  tabCustom: document.getElementById('tabCustom'),
+  configContent: document.getElementById('configContent'),
+  customPanel: document.getElementById('customPanel'),
+  themeLight: document.getElementById('themeLight'),
+  themeDark: document.getElementById('themeDark'),
+  languageSelect: document.getElementById('languageSelect'),
+  jsonHistorySelect: document.getElementById('jsonHistorySelect'),
+  deleteHistoryBtn: document.getElementById('deleteHistoryBtn'),
+  renameHistoryBtn: document.getElementById('renameHistoryBtn'),
+  mobileSwitchBtn: document.getElementById('mobileSwitchBtn'),
+  bgColor: document.getElementById('bgColor'),
+  textColor: document.getElementById('textColor'),
+  fontFamily: document.getElementById('fontFamily'),
+  cellEven: document.getElementById('cellEven'),
+  cellOdd: document.getElementById('cellOdd'),
+  customDefaultBtn: document.getElementById('customDefaultBtn'),
+  loadingAnim: document.getElementById('loadingAnim')
+};
 
-let currentRows=[], currentHeaders=[], sortState={}, showRaw=false, editing=false;
-let lastJson=null;
-let jsonHistory=JSON.parse(localStorage.getItem('jsonHistory')||'[]');
+const state = {
+  originalParsed: null,     // Módulo 4.1.3 - objeto JSON original (para reconstruir)
+  originalRows: [],         // Módulo 4.1.4 - rows flatten
+  currentRows: [],          // Módulo 4.1.5 - current working rows (after filters/sort)
+  currentHeaders: [],
+  sortState: {},            // {col: 'asc'|'desc'}
+  editing: false,
+  columnFilters: {},        // {colKey: value}
+  history: [],              // {hash,name,data,date}
+  mobileMode: (localStorage.getItem('mobileMode') === 'true'),
+  virtualStart: 0,          // Módulo 4.1.6 - virtual scrolling start index
+  rowHeight: 32,            // Módulo 4.1.7 - estimated row height
+  visibleCount: 0,          // Módulo 4.1.8 - number of rows visible
+  filterDebounceMs: 200     // Módulo 4.1.9 - debounce for filters
+};
 
-// --- Funciones utilitarias ---
-function isObj(x){ return x && typeof x==='object' && !Array.isArray(x); }
-function flattenObject(obj,prefix='',out={}) {
+/* Módulo 4.2 - Utilidades (4.2.1 SHA-1, 4.2.2 flatten, 4.2.3 unflatten, 4.2.4 CSV) */
+async function sha1(str){
+  const enc = new TextEncoder();
+  const buf = await crypto.subtle.digest('SHA-1', enc.encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+function isObj(x){ return x && typeof x === 'object' && !Array.isArray(x); }
+function flattenObject(obj, prefix='', out={}){
   if(Array.isArray(obj)){ out[prefix.slice(0,-1)||'array']=JSON.stringify(obj); return out; }
   for(const k of Object.keys(obj||{})){
-    const v=obj[k], key=prefix+k+'.';
-    if(isObj(v)) flattenObject(v,key,out);
-    else if(Array.isArray(v)) out[key.slice(0,-1)]=JSON.stringify(v);
-    else out[key.slice(0,-1)]=v;
+    const v = obj[k], key = prefix + k + '.';
+    if(isObj(v)) flattenObject(v, key, out);
+    else if(Array.isArray(v)) out[key.slice(0,-1)] = JSON.stringify(v);
+    else out[key.slice(0,-1)] = v;
   }
   return out;
 }
+/* Módulo 4.2.3 - Unflatten: reconstruye objeto desde keys con puntos */
+function unflattenObject(flat){
+  const res = {};
+  for(const flatKey of Object.keys(flat || {})){
+    const parts = flatKey.split('.');
+    let cur = res;
+    for(let i=0;i<parts.length;i++){
+      const p = parts[i];
+      if(i === parts.length - 1){
+        // intenta parsear JSON (arrays o objetos) si value parece JSON
+        const val = flat[flatKey];
+        if(typeof val === 'string' && (val.trim().startsWith('[') || val.trim().startsWith('{'))){
+          try{ cur[p] = JSON.parse(val); continue; }catch(e){}
+        }
+        cur[p] = val;
+      } else {
+        if(!cur[p] || typeof cur[p] !== 'object') cur[p] = {};
+        cur = cur[p];
+      }
+    }
+  }
+  return res;
+}
 function getRowsFromJson(parsed){
-  if(Array.isArray(parsed)) return parsed.map(o=>flattenObject(o));
-  for(const k of Object.keys(parsed)){ if(Array.isArray(parsed[k])) return parsed[k].map(o=>flattenObject(o)); }
+  // guarda parsed para reconstrucción
+  if(Array.isArray(parsed)){
+    state.originalParsed = { type: 'array' };
+    return parsed.map(o=>flattenObject(o));
+  }
+  // si objeto con arrays en sus keys, intenta encontrar primer array
+  for(const k of Object.keys(parsed || {})){
+    if(Array.isArray(parsed[k])){
+      state.originalParsed = { type: 'rootKeyArray', key: k, template: parsed };
+      return parsed[k].map(o=>flattenObject(o));
+    }
+  }
+  state.originalParsed = { type: 'object' };
   return [flattenObject(parsed)];
+}
+function tryParseJson(text){
+  try{ return JSON.parse(text); }catch{
+    try {
+      const clean = text.replace(/(['"])?([a-zA-Z0-9_]+)(['"])?\s*:/g, '"$2":');
+      return JSON.parse(clean);
+    }catch{ return null; }
+  }
+}
+function dynamicFilename(ext){
+  const d = new Date();
+  const pad = n=> (n<10?'0':'')+n;
+  return `JSON_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.${ext}`;
 }
 function rowsToCsv(rows, sep){
   if(!rows.length) return '';
-  const allKeys = new Set();
-  rows.forEach(r=>Object.keys(r).forEach(k=>allKeys.add(k)));
-  const headers = Array.from(allKeys);
-  const s = sep==='\\t'?'\t':sep;
-  const esc=v=>{ if(v==null) return ''; const s2=String(v); if(s2.includes('"')||s2.includes(s)||s2.includes('\n')) return `"${s2.replace(/"/g,'""')}"`; return s2; };
-  const lines=[headers.join(s)];
-  for(const r of rows) lines.push(headers.map(h=>esc(r[h])).join(s));
+  const keys = Array.from(rows.reduce((s,r)=>{ Object.keys(r).forEach(k=>s.add(k)); return s; }, new Set()));
+  const esc = v=>{
+    if(v==null) return '';
+    const s = String(v);
+    if(s.includes('"') || s.includes('\n') || s.includes(sep)) return `"${s.replace(/"/g,'""')}"`;
+    return s;
+  };
+  const lines = [keys.join(sep)];
+  for(const r of rows) lines.push(keys.map(k=>esc(r[k])).join(sep));
   return lines.join('\n');
 }
 
-// --- Render tabla ---
-function renderFilteredTbody(rows, highlightCol=null){
-  const tbody = tableWrap.querySelector('tbody'); if(!tbody) return; tbody.innerHTML='';
-  const headers = currentHeaders||[];
-  rows.forEach(r=>{
-    const tr=document.createElement('tr');
-    headers.forEach(h=>{ const td=document.createElement('td'); td.textContent=r[h]!==undefined?r[h]:''; tr.appendChild(td); });
-    tbody.appendChild(tr);
-  });
-  if(highlightCol){
-    const idx=headers.indexOf(highlightCol);
-    if(idx>=0) tbody.querySelectorAll('tr').forEach(tr=>{ const td=tr.children[idx]; if(td){ td.classList.add('blink'); setTimeout(()=>td.classList.remove('blink'),150); }});
-  }
+/* Módulo 4.3 - Persistencia: historial + lastJson + tema + mode (4.3.1 guardar/cargar) */
+function saveHistory(){ try{ localStorage.setItem('jsonHistory', JSON.stringify(state.history)); }catch(e){ console.warn(e); } }
+function loadHistory(){
+  try{
+    const raw = localStorage.getItem('jsonHistory');
+    if(!raw) return;
+    state.history = JSON.parse(raw) || [];
+    renderHistoryDropdown();
+  }catch(e){ console.warn('loadHistory', e); }
 }
+function renderHistoryDropdown(){
+  const sel = el.jsonHistorySelect;
+  sel.innerHTML = '<option value="">-- Seleccionar JSON --</option>';
+  state.history.forEach((it, idx)=>{
+    const opt = document.createElement('option');
+    opt.value = idx;
+    opt.textContent = `${it.name || 'JSON '+(idx+1)} (${new Date(it.date).toLocaleString()})`;
+    sel.appendChild(opt);
+  });
+}
+
+/* Módulo 4.4 - Añadir al historial con dedupe (4.4.1) */
+async function addToHistory(jsonStr, name){
+  if(!jsonStr || !jsonStr.trim()) return;
+  const h = await sha1(jsonStr);
+  const idx = state.history.findIndex(x => x.hash === h);
+  if(idx >= 0){
+    state.history[idx].date = new Date().toISOString();
+  } else {
+    state.history.push({ hash: h, data: jsonStr, name: name || ('JSON ' + (state.history.length+1)), date: new Date().toISOString() });
+    if(state.history.length > 200) state.history.shift();
+  }
+  saveHistory();
+  renderHistoryDropdown();
+}
+
+/* Módulo 4.5 - Botones UI: habilitar/deshabilitar estado (4.5.1) */
+function updateActionButtons(){
+  const hasData = state.currentRows && state.currentRows.length>0;
+  el.downloadSelect.disabled = !hasData;
+  el.toggleRawBtn.disabled = !hasData;
+  el.copyBtn.disabled = !hasData;
+  el.editBtn.disabled = !hasData;
+  el.filterGlobal.disabled = !hasData;
+  el.clearBtn.disabled = !el.jsonin.value.trim();
+  el.deleteHistoryBtn.disabled = el.jsonHistorySelect.value === '';
+}
+
+/* Módulo 4.6 - Drawer/tabs (4.6.1 mostrar solo panel activo) */
+el.configBtn.addEventListener('click', ()=> {
+  el.drawer.classList.toggle('open');
+  showConfigTab();
+});
+function showConfigTab(){
+  el.tabConfig.classList.add('active');
+  el.tabCustom.classList.remove('active');
+  el.configContent.classList.add('active');
+  el.configContent.style.display = 'block';
+  el.customPanel.style.display = 'none';
+  el.customPanel.classList.remove('active');
+}
+function showCustomTab(){
+  el.tabCustom.classList.add('active');
+  el.tabConfig.classList.remove('active');
+  el.configContent.classList.remove('active');
+  el.configContent.style.display = 'none';
+  el.customPanel.style.display = 'block';
+  el.customPanel.classList.add('active');
+}
+el.tabConfig.addEventListener('click', showConfigTab);
+el.tabCustom.addEventListener('click', showCustomTab);
+
+/* Módulo 4.7 - Tema personalizado en tiempo real y persistente (4.7.1 carga/guardado) */
+function applyCustomTheme(colors){
+  if(colors.bg) document.documentElement.style.setProperty('--bg', colors.bg);
+  if(colors.text) document.documentElement.style.setProperty('--fg', colors.text);
+  if(colors.cellEven) document.documentElement.style.setProperty('--cell-even', colors.cellEven);
+  if(colors.cellOdd) document.documentElement.style.setProperty('--cell-odd', colors.cellOdd);
+  if(colors.font) document.body.style.fontFamily = colors.font;
+}
+function loadCustomTheme(){
+  try{
+    const raw = localStorage.getItem('customTheme');
+    if(raw){
+      const c = JSON.parse(raw);
+      el.bgColor.value = c.bg || '#ffffff';
+      el.textColor.value = c.text || '#111111';
+      el.fontFamily.value = c.font || '';
+      el.cellEven.value = c.cellEven || '#f9f9f9';
+      el.cellOdd.value = c.cellOdd || '#eef3ff';
+      applyCustomTheme(c);
+    } else {
+      el.bgColor.value = '#ffffff';
+      el.textColor.value = '#111111';
+      el.fontFamily.value = '';
+      el.cellEven.value = '#f9f9f9';
+      el.cellOdd.value = '#eef3ff';
+    }
+  }catch(e){ console.warn(e); }
+}
+function saveCustomTheme(){
+  const c = { bg: el.bgColor.value, text: el.textColor.value, font: el.fontFamily.value, cellEven: el.cellEven.value, cellOdd: el.cellOdd.value};
+  localStorage.setItem('customTheme', JSON.stringify(c));
+  applyCustomTheme(c);
+}
+['bgColor','textColor','fontFamily','cellEven','cellOdd'].forEach(id=>{
+  const node = el[id] || document.getElementById(id);
+  if(node){
+    node.addEventListener('input', ()=>{
+      saveCustomTheme();
+    });
+  }
+});
+el.customDefaultBtn.addEventListener('click', ()=>{
+  if(!confirm('¿Restablecer el tema a los valores predeterminados?')) return;
+  localStorage.removeItem('customTheme');
+  el.bgColor.value = '#ffffff';
+  el.textColor.value = '#111111';
+  el.fontFamily.value = '';
+  el.cellEven.value = '#f9f9f9';
+  el.cellOdd.value = '#eef3ff';
+  applyCustomTheme({bg:'#ffffff', text:'#111111', font:'', cellEven:'#f9f9f9', cellOdd:'#eef3ff'});
+});
+
+/* Módulo 4.8 - Modo Web/Móvil (persistente) */
+function enableMobileMode(flag){
+  state.mobileMode = !!flag;
+  document.body.classList.toggle('mobile', !!flag);
+  localStorage.setItem('mobileMode', state.mobileMode ? 'true' : 'false');
+}
+el.mobileSwitchBtn.addEventListener('click', ()=>{
+  enableMobileMode(!state.mobileMode);
+});
+
+/* Módulo 4.9 - Control del botón cargar URL (4.9.1 desactivar si vacío) */
+function updateFetchButtonState(){
+  el.fetchBtn.disabled = !el.urlIn.value.trim();
+}
+el.urlIn.addEventListener('input', updateFetchButtonState);
+updateFetchButtonState();
+
+/* Módulo 4.10 - Parseo JSON, generar filas y guardar lastJson (4.10.1, 4.10.2) */
+async function parseJsonInput(addToHist){
+  const txt = el.jsonin.value || '';
+  if(!txt.trim()){
+    state.originalParsed = null;
+    state.originalRows = []; state.currentRows = []; state.currentHeaders = [];
+    el.tableWrap.innerHTML = '<div style="padding:12px;color:var(--muted)">No hay tabla para mostrar</div>';
+    updateActionButtons();
+    return;
+  }
+  const parsed = tryParseJson(txt);
+  if(!parsed){
+    el.jsonin.classList.add('error');
+    state.originalRows = []; state.currentRows = [];
+    el.tableWrap.innerHTML = '<div style="padding:12px;color:var(--error)">JSON inválido</div>';
+    updateActionButtons();
+    return;
+  } else {
+    el.jsonin.classList.remove('error');
+  }
+  const rows = getRowsFromJson(parsed);
+  state.originalRows = rows;
+  state.currentRows = rows.slice();
+  if(addToHist) await addToHistory(txt);
+  localStorage.setItem('lastJson', txt);
+  state.originalParsed = parsed;
+  // reset virtual scrolling start
+  state.virtualStart = 0;
+  computeVisibleCount();
+  renderTable();
+  updateActionButtons();
+}
+function saveLastJson(){ try{ localStorage.setItem('lastJson', el.jsonin.value || ''); }catch(e){console.warn(e);} }
+
+/* Módulo 4.11 - Debounce helper (4.11.1) */
+function debounce(fn, ms){
+  let t;
+  return function(...args){
+    clearTimeout(t);
+    t = setTimeout(()=> fn.apply(this, args), ms);
+  };
+}
+
+/* Módulo 4.12 - Virtual scrolling calculations (4.12.1) */
+function computeVisibleCount(){
+  const h = el.tableWrap.clientHeight || 420;
+  state.visibleCount = Math.ceil(h / state.rowHeight) + 6; // buffer
+}
+
+/* Módulo 4.13 - Render de la tabla con virtual scrolling (4.13.1 filtros, 4.13.2 headers sticky) */
 function renderTable(){
-  tableWrap.innerHTML=''; if(!currentRows.length) return;
-  const tbl=document.createElement('table');
-  const thead=document.createElement('thead');
-  // Headers
-  const trh=document.createElement('tr');
-  currentHeaders.forEach(h=>{ const th=document.createElement('th'); th.textContent=h; th.style.minWidth='80px'; th.addEventListener('click', ()=>sortColumn(h)); trh.appendChild(th); });
-  thead.appendChild(trh);
-  // Filtros
-  const trFilters=document.createElement('tr');
-  currentHeaders.forEach(h=>{
-    const th=document.createElement('th'); th.style.padding='2px'; th.style.minWidth='80px';
-    const inputContainer=document.createElement('div'); inputContainer.style.display='flex'; inputContainer.style.alignItems='center';
-    const input=document.createElement('input'); input.type='text'; input.placeholder='🔍'; input.className='columnFilter'; input.style.flex='1'; input.style.fontSize='11px';
-    const clearX=document.createElement('span'); clearX.textContent='✕'; clearX.className='clearBtn';
-    clearX.addEventListener('click', ()=>{ input.value=''; renderFilteredTbody(currentRows); clearX.style.display='none'; input.focus(); });
-    input.addEventListener('input',()=>{ const val=input.value.toLowerCase(); const filtered=currentRows.filter(r=>r[h]!==undefined && String(r[h]).toLowerCase().includes(val)); renderFilteredTbody(filtered,h); clearX.style.display=val?'inline':'none'; });
-    inputContainer.appendChild(input); inputContainer.appendChild(clearX); th.appendChild(inputContainer); trFilters.appendChild(th);
+  const rows = state.currentRows || [];
+  if(!rows.length){
+    // Show headers if possible (we need to compute headers from originalRows)
+    const keys = state.originalRows.length ? Array.from(state.originalRows.reduce((s,r)=>{ Object.keys(r).forEach(k=>s.add(k)); return s; }, new Set())) : [];
+    if(!keys.length){
+      el.tableWrap.innerHTML = '<div style="padding:12px;color:var(--muted)">No hay tabla para mostrar</div>';
+      updateActionButtons();
+      return;
+    }
+    // Render table with headers + filter row and empty tbody
+    const html = buildTableHtml([], keys, true);
+    el.tableWrap.innerHTML = html;
+    attachTableEvents();
+    updateActionButtons();
+    return;
+  }
+
+  // apply filters (global + column)
+  const globalVal = (el.filterGlobal.value || '').toLowerCase();
+  let filtered = rows.filter(r=>{
+    if(globalVal){
+      if(!Object.values(r).some(v=>String(v||'').toLowerCase().includes(globalVal))) return false;
+    }
+    for(const [col, val] of Object.entries(state.columnFilters || {})){
+      if(val && !(String((r[col]||'')).toLowerCase().includes(val.toLowerCase()))) return false;
+    }
+    return true;
   });
-  thead.appendChild(trFilters);
-  tbl.appendChild(thead); tbl.appendChild(document.createElement('tbody'));
-  tableWrap.appendChild(tbl);
-  renderFilteredTbody(currentRows);
+
+  // compute keys from filtered or all rows
+  const keys = Array.from((filtered.length ? filtered : rows).reduce((s,r)=>{ Object.keys(r).forEach(k=>s.add(k)); return s; }, new Set()));
+  state.currentHeaders = keys;
+
+  // virtual scrolling: compute start based on scrollTop
+  const scrollTop = el.tableWrap.scrollTop || 0;
+  state.virtualStart = Math.max(0, Math.floor(scrollTop / state.rowHeight) - 3);
+  computeVisibleCount();
+  const visibleRows = filtered.slice(state.virtualStart, state.virtualStart + state.visibleCount);
+
+  // build HTML with headers + filter row + tbody containing only visible rows + spacer rows
+  const topSpacerHeight = state.virtualStart * state.rowHeight;
+  const bottomSpacerHeight = Math.max(0, (filtered.length - state.virtualStart - visibleRows.length) * state.rowHeight);
+
+  let html = '';
+  html += `<table><thead><tr>`;
+  keys.forEach(k => {
+    const cls = (state.sortState[k] === 'asc') ? 'order-asc' : (state.sortState[k] === 'desc') ? 'order-desc' : '';
+    html += `<th class="${cls}" data-col="${encodeURIComponent(k)}">${escapeHtml(k)}</th>`;
+  });
+  html += `</tr>`;
+
+  // filter row
+  html += '<tr class="filter-row">';
+  keys.forEach(k=>{
+    const val = state.columnFilters[k] || '';
+    html += `<th><span class="filter-col-wrap"><input class="filter-col" data-col="${encodeURIComponent(k)}" value="${escapeAttribute(val)}" placeholder="Filtrar..." /><button class="clear-btn filter-col-clear" data-col="${encodeURIComponent(k)}" title="Limpiar">✕</button></span></th>`;
+  });
+  html += '</tr></thead><tbody>';
+  // top spacer
+  html += `<tr style="height:${topSpacerHeight}px"><td style="padding:0;border:none" colspan="${keys.length}"></td></tr>`;
+
+  if(visibleRows.length){
+    visibleRows.forEach((r, idx)=>{
+      html += '<tr>';
+      keys.forEach(k=>{
+        const v = r[k] == null ? '' : escapeHtml(String(r[k]));
+        html += `<td data-row="${state.virtualStart + idx}" data-col="${encodeURIComponent(k)}">${v}</td>`;
+      });
+      html += '</tr>';
+    });
+  } else {
+    // No results but keep headers and filter row visible; show empty message row
+    html += `<tr><td colspan="${keys.length}" style="padding:12px;color:var(--muted)">No hay resultados para el filtro</td></tr>`;
+  }
+
+  // bottom spacer
+  html += `<tr style="height:${bottomSpacerHeight}px"><td style="padding:0;border:none" colspan="${keys.length}"></td></tr>`;
+  html += `</tbody></table>`;
+
+  el.tableWrap.innerHTML = html;
+
+  attachTableEvents(filtered);
+
+  updateActionButtons();
 }
 
-// --- Otras funciones ---
-function sortColumn(header){ const dir=sortState[header]==='asc'?'desc':'asc'; sortState[header]=dir; currentRows.sort((a,b)=>{ const va=a[header],vb=b[header]; if(va==null) return 1; if(vb==null) return -1; if(!isNaN(va) && !isNaN(vb)) return dir==='asc'?va-vb:vb-va; return dir==='asc'?String(va).localeCompare(String(vb)):String(vb).localeCompare(String(va)); }); renderFilteredTbody(currentRows, header); }
-function parseJsonInput(){ let parsed; try{ parsed=JSON.parse(jsonin.value); }catch(e){ tableWrap.innerHTML=''; return; } lastJson=parsed; currentRows=getRowsFromJson(parsed); const allKeys=new Set(); currentRows.forEach(r=>Object.keys(r).forEach(k=>allKeys.add(k))); currentHeaders=Array.from(allKeys); renderTable(); }
+/* Módulo 4.14 - Attach events for headers, filters, clear buttons, virtualization scroll, editing (4.14.1) */
+function attachTableEvents(filteredRows){
+  // header sort
+  el.tableWrap.querySelectorAll('th[data-col]').forEach(th=>{
+    th.onclick = ()=>{
+      const col = decodeURIComponent(th.dataset.col);
+      const dir = (state.sortState[col] === 'asc') ? 'desc' : 'asc';
+      state.sortState = {}; state.sortState[col] = dir;
+      state.currentRows.sort((a,b)=>{
+        const va = a[col], vb = b[col];
+        if(va==null) return 1; if(vb==null) return -1;
+        if(!isNaN(va) && !isNaN(vb)) return dir==='asc' ? va - vb : vb - va;
+        return dir==='asc' ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
+      });
+      // reset scroll to top to show changes
+      el.tableWrap.scrollTop = 0;
+      renderTable();
+    };
+  });
 
-// --- Listeners ---
-jsonin.addEventListener('input',()=>parseJsonInput());
-fetchBtn.addEventListener('click', async()=>{
-  const url=urlIn.value.trim(); if(!url) return;
-  try{ const resp=await fetch(url); const text=await resp.text(); try{ jsonin.value=JSON.stringify(JSON.parse(text),null,2); }catch(e){ jsonin.value=text; } parseJsonInput(); } catch(e){ console.warn('Fetch falló',e); }
-});
-clearBtn.addEventListener('click', ()=>{ jsonin.value=''; currentRows=[]; tableWrap.innerHTML=''; });
-toggleEditBtn.addEventListener('click', ()=>{
-  editing=!editing; toggleEditBtn.textContent=editing?'🔓 Editable':'✏️ Editar';
-  tableWrap.querySelectorAll('td').forEach(td=>td.contentEditable=editing);
-});
-toggleRawBtn.addEventListener('click', ()=>{
-  showRaw=!showRaw;
-  if(!showRaw){ rawDisplay.style.display='none'; toggleRawBtn.textContent='Mostrar Raw'; return; }
-  rawDisplay.value=rowsToCsv(currentRows, separatorSelect.value); rawDisplay.style.display='block'; toggleRawBtn.textContent='Ocultar Raw';
-});
-separatorSelect.addEventListener('change', ()=>{ if(showRaw) rawDisplay.value=rowsToCsv(currentRows, separatorSelect.value); });
-copyBtn.addEventListener('click', async()=>{
-  let text=showRaw?rawDisplay.value:rowsToCsv(currentRows, separatorSelect.value);
-  await navigator.clipboard.writeText(text);
-  copyMsg.style.display='block'; setTimeout(()=>copyMsg.style.display='none',1200);
-});
+   // filter inputs events with debounce
+  const deb = debounce(function(inp){
+    const col = decodeURIComponent(inp.dataset.col);
+    state.columnFilters[col] = inp.value;
+    renderTable();
+  }, state.filterDebounceMs);
 
-// Config panel
-configBtn.addEventListener('click', e=>{ e.stopPropagation(); configPanel.style.display=configPanel.style.display==='block'?'none':'block'; customThemePanel.style.display='none'; });
-customThemeBtn.addEventListener('click', e=>{ e.stopPropagation(); customThemePanel.style.display='block'; configPanel.style.display='none'; });
-backToConfigBtn.addEventListener('click', e=>{ e.stopPropagation(); customThemePanel.style.display='none'; configPanel.style.display='block'; });
-document.addEventListener('click', ()=>{ configPanel.style.display='none'; customThemePanel.style.display='none'; });
-[configPanel, customThemePanel].forEach(p=>p.addEventListener('click', e=>e.stopPropagation()));
-applyThemeBtn.addEventListener('click', ()=>{
-  document.body.style.setProperty('--bg-color', document.getElementById('bgColorInput').value);
-  document.body.style.setProperty('--text-color', document.getElementById('textColorInput').value);
-  document.body.style.setProperty('--cell-even', document.getElementById('cellColorEvenInput').value);
-  document.body.style.setProperty('--cell-odd', document.getElementById('cellColorOddInput').value);
-  document.body.style.fontFamily=document.getElementById('fontInput').value||'monospace';
-});
-resetThemeBtn.addEventListener('click', ()=>{ document.body.style=''; });
-themeToggleBtn.addEventListener('click', ()=>document.body.classList.toggle('dark'));
-downloadSelect.addEventListener('change', ()=>{
-  const format=downloadSelect.value;
-  if(!format) return;
-  if(format==='csv'||format==='txt'){
-    const blob=new Blob([rowsToCsv(currentRows, separatorSelect.value)],{type:'text/plain;charset=utf-8'});
-    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='data.'+format; a.click();
-  } else if(format==='xlsx'){
-    const wb=XLSX.utils.book_new();
-    const ws=XLSX.utils.json_to_sheet(currentRows);
-    XLSX.utils.book_append_sheet(wb, ws,'Sheet1');
-    XLSX.writeFile(wb,'data.xlsx');
+  el.tableWrap.querySelectorAll('.filter-col').forEach(inp=>{
+    inp.addEventListener('input', (e)=> {
+      // Actualizar inmediatamente el valor en el estado
+      const col = decodeURIComponent(inp.dataset.col);
+      state.columnFilters[col] = inp.value;
+      // Llamar al debounce para procesamiento posterior
+      deb(inp);
+    });
+    // Añadir esta línea para permitir la escritura continua
+    inp.addEventListener('keydown', (e)=> { 
+      // Evitar que se bloquee la entrada
+      e.stopPropagation();
+    });
+  });
+
+  // clear buttons inside columns
+  el.tableWrap.querySelectorAll('.filter-col-clear').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const col = decodeURIComponent(btn.dataset.col);
+      state.columnFilters[col] = '';
+      // re-render and focus the input so user can continue typing
+      renderTable();
+      setTimeout(()=>{
+        const selector = `.filter-col[data-col="${encodeURIComponent(col)}"]`;
+        const newInp = el.tableWrap.querySelector(selector);
+        if(newInp){ newInp.value=''; newInp.focus(); }
+      }, 0);
+    });
+  });
+
+  // editing handling
+  if(state.editing){
+    el.tableWrap.querySelectorAll('tbody td').forEach(td=>{
+      td.contentEditable = 'true';
+      td.classList.add('editable-cell');
+      td.addEventListener('input', onCellEdit);
+    });
+  } else {
+    el.tableWrap.querySelectorAll('tbody td').forEach(td=>{
+      td.contentEditable = 'false';
+      td.classList.remove('editable-cell');
+      td.removeEventListener('input', onCellEdit);
+    });
   }
-  downloadSelect.value='';
+
+  // virtualization: update on scroll
+  el.tableWrap.onscroll = function(){
+    // recompute virtualStart from scrollTop and re-render
+    const scrollTop = el.tableWrap.scrollTop || 0;
+    const newStart = Math.max(0, Math.floor(scrollTop / state.rowHeight) - 3);
+    if(newStart !== state.virtualStart){
+      state.virtualStart = newStart;
+      renderTable();
+    }
+  };
+}
+
+/* Módulo 4.15 - onCellEdit: sincronizar edición con estructura JSON original (4.15.1) */
+function onCellEdit(e){
+  const td = e.target;
+  const virtualRowIdx = Number(td.dataset.row);
+  const col = decodeURIComponent(td.dataset.col);
+  const newVal = td.innerText;
+  // Determine actual index in currentRows based on virtualStart
+  const actualIdx = virtualRowIdx;
+  // Update currentRows
+  if(typeof actualIdx === 'number' && state.currentRows[actualIdx]){
+    state.currentRows[actualIdx][col] = newVal;
+  }
+  // Update originalParsed structure:
+  // Reconstruct nested object from flattened row and replace in originalParsed accordingly.
+  // Determine where to place: if originalParsed.type === 'array' -> map by index
+  if(state.originalParsed && state.originalParsed.type === 'array'){
+    // unflatten currentRows[actualIdx] to object and place into parsed array
+    const newObj = unflattenObject(state.currentRows[actualIdx]);
+    // We cannot mutate state.originalParsed directly because we only stored type; instead we keep originalParsedFull in localStorage when load
+    // Simpler approach: store lastParsedFull in memory when parsing
+    if(state.lastParsedFull && Array.isArray(state.lastParsedFull)){
+      state.lastParsedFull[actualIdx] = newObj;
+      // persist lastParsedFull to lastJson
+      localStorage.setItem('lastJson', JSON.stringify(state.lastParsedFull, null, 2));
+      el.jsonin.value = JSON.stringify(state.lastParsedFull, null, 2);
+    }
+  } else if(state.originalParsed && state.originalParsed.type === 'rootKeyArray'){
+    const key = state.originalParsed.key;
+    if(state.lastParsedFull && state.lastParsedFull[key] && Array.isArray(state.lastParsedFull[key])){
+      const newObj = unflattenObject(state.currentRows[actualIdx]);
+      state.lastParsedFull[key][actualIdx] = newObj;
+      localStorage.setItem('lastJson', JSON.stringify(state.lastParsedFull, null, 2));
+      el.jsonin.value = JSON.stringify(state.lastParsedFull, null, 2);
+    }
+  } else if(state.originalParsed && state.originalParsed.type === 'object'){
+    // single object: update first element
+    const newObj = unflattenObject(state.currentRows[actualIdx]);
+    state.lastParsedFull = newObj;
+    localStorage.setItem('lastJson', JSON.stringify(state.lastParsedFull, null, 2));
+    el.jsonin.value = JSON.stringify(state.lastParsedFull, null, 2);
+  }
+}
+
+/* Módulo 4.16 - Clear JSON behavior (4.16.1) */
+el.clearBtn.addEventListener('click', ()=>{
+  el.jsonin.value = '';
+  state.originalParsed = null;
+  state.originalRows = []; state.currentRows = []; state.currentHeaders = [];
+  el.tableWrap.innerHTML = '<div style="padding:12px;color:var(--muted)">No hay tabla para mostrar</div>';
+  updateActionButtons();
+  localStorage.removeItem('lastJson');
 });
-globalFilter.addEventListener('input', ()=>{ const val=globalFilter.value.toLowerCase(); const filtered=currentRows.filter(r=>Object.values(r).some(v=>String(v).toLowerCase().includes(val))); renderFilteredTbody(filtered); });
-globalClearBtn.addEventListener('click', ()=>{ globalFilter.value=''; renderFilteredTbody(currentRows); });
+
+/* Módulo 4.17 - Copiar con mensaje en la posición del cursor (4.17.1) */
+el.copyBtn.addEventListener('click', async (ev)=>{
+  if(!state.currentRows || !state.currentRows.length) return;
+  try{
+    await navigator.clipboard.writeText(rowsToCsv(state.currentRows, el.separatorSelect.value));
+    const note = document.createElement('div'); note.textContent = 'Copiado';
+    note.style.position = 'fixed'; note.style.zIndex = 99999; note.style.padding = '6px 10px';
+    note.style.background = '#e0f7fa'; note.style.borderRadius = '6px';
+    if(ev && ev.clientX && ev.clientY){
+      note.style.left = (ev.clientX + 8) + 'px';
+      note.style.top = (ev.clientY + 8) + 'px';
+    } else {
+      note.style.left = '50%'; note.style.top = '12px'; note.style.transform = 'translateX(-50%)';
+    }
+    document.body.appendChild(note);
+    setTimeout(()=> note.remove(), 900);
+  }catch(e){ console.warn(e); }
+});
+
+/* Módulo 4.18 - Global filter and clear (4.18.1) with debounce */
+const debFilterGlobal = debounce(()=>{ renderTable(); updateActionButtons(); }, state.filterDebounceMs);
+el.filterGlobal.addEventListener('input', debFilterGlobal);
+el.filterGlobalClearBtn.addEventListener('click', ()=>{
+  el.filterGlobal.value = '';
+  el.filterGlobal.focus();
+  renderTable();
+});
+
+/* Módulo 4.19 - Edit toggle (4.19.1) */
+el.editBtn.addEventListener('click', ()=>{
+  state.editing = !state.editing;
+  el.editBtn.classList.toggle('active', state.editing);
+  el.editBtn.textContent = state.editing ? '💾 Guardar' : '✏️ Editar';
+  if(!state.editing) saveLastJson();
+  renderTable();
+});
+
+/* Módulo 4.20 - Fetch URL (4.20.1) */
+el.fetchBtn.addEventListener('click', async ()=>{
+  if(!el.urlIn.value.trim()) return;
+  try{
+    el.fetchBtn.disabled = true;
+    el.fetchBtn.textContent = 'Cargando...';
+    const res = await fetch(el.urlIn.value.trim());
+    const txt = await res.text();
+    const parsed = tryParseJson(txt);
+    el.jsonin.value = parsed ? JSON.stringify(parsed, null, 2) : txt;
+    state.lastParsedFull = parsed;
+    await parseJsonInput(true);
+  }catch(e){ console.warn(e); alert('Error cargando URL'); }
+  el.fetchBtn.textContent = 'Cargar URL';
+  updateFetchButtonState();
+});
+
+/* Módulo 4.21 - Download / raw / separator change behavior (4.21.1) */
+el.downloadSelect.addEventListener('change', ()=>{
+  const val = el.downloadSelect.value;
+  if(!val) return;
+  const sep = el.separatorSelect.value;
+  if(val === 'csv' || val === 'txt'){
+    const content = rowsToCsv(state.currentRows, sep);
+    const blob = new Blob([content], {type:'text/plain;charset=utf-8'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = dynamicFilename(val); a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 1500);
+  } else if(val === 'xlsx'){
+    const ws = XLSX.utils.json_to_sheet(state.currentRows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+    XLSX.writeFile(wb, dynamicFilename(val));
+  }
+  el.downloadSelect.value = '';
+});
+el.toggleRawBtn.addEventListener('click', ()=>{
+  if(!state.currentRows || !state.currentRows.length) return;
+  if(el.rawDisplay.style.display === 'block'){ el.rawDisplay.style.display = 'none'; el.tableWrap.style.display = ''; }
+  else {
+    el.rawDisplay.value = rowsToCsv(state.currentRows, el.separatorSelect.value);
+    el.rawDisplay.style.display = 'block'; el.tableWrap.style.display = 'none';
+    setTimeout(()=>{ el.rawDisplay.select(); }, 20);
+  }
+});
+// Módulo 4.21.2 - Cuando cambia el separador y RAW visible, actualizar y seleccionar
+el.separatorSelect.addEventListener('change', ()=>{
+  if(el.rawDisplay.style.display === 'block' && state.currentRows && state.currentRows.length){
+    el.rawDisplay.value = rowsToCsv(state.currentRows, el.separatorSelect.value);
+    setTimeout(()=>{ el.rawDisplay.select(); }, 20);
+  }
+});
+
+/* Módulo 4.22 - Historial: seleccionar con confirmación, renombrar y eliminar (4.22.1) */
+el.jsonHistorySelect.addEventListener('change', ()=>{
+  el.deleteHistoryBtn.disabled = el.jsonHistorySelect.value === '';
+});
+el.jsonHistorySelect.addEventListener('dblclick', ()=>{
+  const idx = el.jsonHistorySelect.value;
+  if(idx === '') return;
+  const item = state.history[idx];
+  if(!item) return;
+  if(!confirm('¿Cargar este JSON desde el historial?')) return;
+  el.jsonin.value = item.data;
+  state.lastParsedFull = tryParseJson(item.data);
+  parseJsonInput(false);
+});
+el.renameHistoryBtn.addEventListener('click', ()=>{
+  const idx = el.jsonHistorySelect.value;
+  if(idx === '') return alert('Selecciona un JSON del historial');
+  const newName = prompt('Nuevo nombre:', state.history[idx].name || '');
+  if(newName){ state.history[idx].name = newName; saveHistory(); renderHistoryDropdown(); el.jsonHistorySelect.value = idx; }
+});
+el.deleteHistoryBtn.addEventListener('click', ()=>{
+  const idx = el.jsonHistorySelect.value;
+  if(idx === '') return alert('Selecciona un elemento para eliminar');
+  if(confirm('Eliminar este JSON del historial?')){
+    state.history.splice(idx, 1);
+    saveHistory(); renderHistoryDropdown();
+    el.jsonHistorySelect.value = '';
+    el.deleteHistoryBtn.disabled = true;
+  }
+});
+
+/* Módulo 4.23 - Click fuera del drawer cierra (4.23.1) */
+document.addEventListener('mousedown', (e)=>{
+  if(el.drawer.classList.contains('open')){
+    if(!el.drawer.contains(e.target) && !el.configBtn.contains(e.target)){
+      el.drawer.classList.remove('open');
+      showConfigTab();
+    }
+  }
+});
+
+/* Módulo 4.24 - Carga inicial (4.24.1 tema, historial, último JSON, botones) */
+(async function init(){
+  try{
+    // 4.24.2 - tema claro/oscuro
+    const savedTheme = localStorage.getItem('theme');
+    if(savedTheme === 'dark') document.body.classList.add('dark');
+    else document.body.classList.remove('dark');
+    el.themeLight.addEventListener('click', ()=> { localStorage.setItem('theme','light'); document.body.classList.remove('dark'); });
+    el.themeDark.addEventListener('click', ()=> { localStorage.setItem('theme','dark'); document.body.classList.add('dark'); });
+
+    // 4.24.3 - load custom theme
+    loadCustomTheme();
+
+    // 4.24.4 - history
+    loadHistory();
+
+    // 4.24.5 - last JSON
+    const last = localStorage.getItem('lastJson');
+    if(last && last.trim()){ el.jsonin.value = last; state.lastParsedFull = tryParseJson(last); await parseJsonInput(false); }
+    else { updateActionButtons(); }
+
+    // 4.24.6 - fetch button initial state
+    updateFetchButtonState();
+
+    // 4.24.7 - mobile mode
+    const mobile = localStorage.getItem('mobileMode') === 'true';
+    enableMobileMode(mobile);
+
+    // 4.24.8 - ensure loading hidden
+    if(el.loadingAnim) el.loadingAnim.style.display = 'none';
+  }catch(e){ console.warn('init', e); }
+})();
+
+/* Módulo 4.25 - Helpers de escape */
+function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]); }
+function escapeAttribute(s){ return (s||'').replace(/"/g,'&quot;'); }
+
+/* Módulo 4.26 - Ensure clear button state updates on manual input (4.26.1) */
+el.jsonin.addEventListener('input', ()=>{
+  // enable clear button when any text
+  updateActionButtons();
+});
+
+/* Módulo 4.27 - Debounce for column filters behaviour handled in attachTableEvents */
+
+/* Módulo 4.28 - Save reconstructed JSON for export (4.28.1) */
+/* Reconstruye JSON completo desde state.currentRows y state.originalParsed */
+function reconstructJsonFull(){
+  if(!state.currentRows || !state.currentRows.length) return null;
+  if(state.originalParsed && state.originalParsed.type === 'array'){
+    // unflatten each row into object
+    const arr = state.currentRows.map(r => unflattenObject(r));
+    return arr;
+  } else if(state.originalParsed && state.originalParsed.type === 'rootKeyArray'){
+    const key = state.originalParsed.key;
+    const full = JSON.parse(JSON.stringify(state.lastParsedFull || {}));
+    full[key] = state.currentRows.map(r => unflattenObject(r));
+    return full;
+  } else if(state.originalParsed && state.originalParsed.type === 'object'){
+    // single object
+    return unflattenObject(state.currentRows[0]);
+  }
+  return null;
+}
+
+/* Módulo 4.29 - Update raw when separator changes and RAW visible handled above */
+
+/* Módulo 4.30 - Virtual scrolling: compute visibleCount on resize */
+window.addEventListener('resize', ()=>{
+  computeVisibleCount();
+  renderTable();
+});
+
+/* Módulo 4.31 - End of script */
 </script>
+
+<!-- XLSX for download support (Módulo 5.1) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </body>
 </html>
