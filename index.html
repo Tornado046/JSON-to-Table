@@ -9,82 +9,257 @@
 <link href="https://fonts.googleapis.com/css?family=Inter:400,700&display=swap" rel="stylesheet">
 
 <style>
-/* Módulo 1.2 - Variables y tema */
+/* Módulo 1.2 - Variables CSS y sistema de temas */
 :root{
-  --bg:#ffffff; --fg:#111111; --header-bg:#f2f2f2; --muted:#888;
-  --cell-even:#f9f9f9; --cell-odd:#eef3ff; --accent:#2979ff;
-  --input-border:#bbb; --error:#e53935;
+  --bg:#ffffff; 
+  --fg:#111111; 
+  --header-bg:#f2f2f2; 
+  --muted:#888;
+  --cell-even:#f9f9f9; 
+  --cell-odd:#eef3ff; 
+  --accent:#2979ff;
+  --input-border:#bbb; 
+  --input-bg:#ffffff;
+  --button-bg:#f2f6ff;
+  --button-border:#bbb;
+  --error:#e53935;
   --th-height:40px;
   --row-height:32px;
   --font-main: 'Inter', system-ui, Arial, sans-serif;
 }
+
+/* Módulo 1.2.1 - Variables para modo oscuro */
 body.dark{
-  --bg:#141414; --fg:#eee; --header-bg:#222; --muted:#aaa;
-  --cell-even:#252525; --cell-odd:#202020; --accent:#2979ff;
-}
-*{box-sizing:border-box}
-body{
-  margin:0; font-family:var(--font-main); color:var(--fg);
-  background:var(--bg); -webkit-font-smoothing:antialiased;
+  --bg:#141414; 
+  --fg:#eee; 
+  --header-bg:#222; 
+  --muted:#aaa;
+  --cell-even:#252525; 
+  --cell-odd:#202020; 
+  --accent:#2979ff;
+  --input-border:#555;
+  --input-bg:#2a2a2a;
+  --button-bg:#333;
+  --button-border:#555;
 }
 
-/* Módulo 1.3 - Layout */
+/* Módulo 1.3 - Reset y estilos base */
+*{box-sizing:border-box}
+body{
+  margin:0; 
+  font-family:var(--font-main); 
+  color:var(--fg);
+  background:var(--bg); 
+  -webkit-font-smoothing:antialiased;
+}
+
+/* Módulo 1.4 - Layout y contenedores */
 .container{padding:12px;}
 .row{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
 
-/* Módulo 1.4 - Inputs y botones */
+/* Módulo 1.5 - Estilos de inputs y controles */
 input[type=text], textarea, select, button{
   font-family:var(--font-main);
   font-size:14px;
 }
-textarea#jsonin{
-  width:100%; min-height:160px; padding:10px; border:2px solid var(--input-border);
-  border-radius:6px; resize:vertical; background:inherit; color:inherit;
-}
-textarea#jsonin.error{ border-color:var(--error); box-shadow:0 0 6px rgba(229,57,53,0.18); }
-input[type=text]{padding:6px;border-radius:6px;border:1px solid var(--input-border)}
-button{padding:6px 10px;border-radius:6px;border:1px solid var(--input-border);background:#f2f6ff;cursor:pointer}
-button:disabled{background:#f0f0f0;color:var(--muted);cursor:not-allowed}
 
-/* Módulo 1.5 - Drawer (configuración) */
+/* Módulo 1.5.1 - Textarea JSON principal */
+textarea#jsonin{
+  width:100%; 
+  min-height:160px; 
+  padding:10px; 
+  border:2px solid var(--input-border);
+  border-radius:6px; 
+  resize:vertical; 
+  background:var(--input-bg); 
+  color:var(--fg);
+}
+textarea#jsonin.error{ 
+  border-color:var(--error); 
+  box-shadow:0 0 6px rgba(229,57,53,0.18); 
+}
+
+/* Módulo 1.5.2 - Inputs de texto */
+input[type=text]{
+  padding:6px;
+  border-radius:6px;
+  border:1px solid var(--input-border);
+  background:var(--input-bg);
+  color:var(--fg);
+}
+
+/* Módulo 1.5.3 - Selectores */
+select{
+  padding:6px;
+  border-radius:6px;
+  border:1px solid var(--input-border);
+  background:var(--input-bg);
+  color:var(--fg);
+}
+
+/* Módulo 1.5.4 - Botones */
+button{
+  padding:6px 10px;
+  border-radius:6px;
+  border:1px solid var(--button-border);
+  background:var(--button-bg);
+  color:var(--fg);
+  cursor:pointer;
+}
+button:hover{
+  opacity:0.9;
+}
+button:disabled{
+  background:#f0f0f0;
+  color:var(--muted);
+  cursor:not-allowed;
+}
+body.dark button:disabled{
+  background:#1a1a1a;
+}
+
+/* Módulo 1.6 - Drawer de configuración */
 #drawer{
-  position:fixed; right:-100%; top:0; width:360px; height:100vh; background:var(--header-bg);
-  box-shadow:0 6px 24px rgba(0,0,0,0.12); transition:right .28s; z-index:9999; padding:12px; overflow:auto;
+  position:fixed; 
+  right:-100%; 
+  top:0; 
+  width:360px; 
+  height:100vh; 
+  background:var(--header-bg);
+  box-shadow:0 6px 24px rgba(0,0,0,0.12); 
+  transition:right .28s; 
+  z-index:9999; 
+  padding:12px; 
+  overflow:auto;
 }
 #drawer.open{ right:0; }
+
+/* Módulo 1.6.1 - Pestañas del drawer */
 .tab-bar{display:flex;gap:6px;margin-bottom:12px}
-.tab-btn{flex:1;padding:10px;border-radius:8px;border:0;background:#eee;cursor:pointer}
-.tab-btn.active{background:var(--accent);color:#fff}
+.tab-btn{
+  flex:1;
+  padding:10px;
+  border-radius:8px;
+  border:0;
+  background:var(--input-bg);
+  color:var(--fg);
+  cursor:pointer;
+}
+.tab-btn.active{
+  background:var(--accent);
+  color:#fff;
+}
 
-/* Módulo 1.6 - Table area: mantiene su propio scroll (tabla con scroll) */
-#tableWrap{ width:100%; margin-top:10px; border-radius:8px; border:1px solid #e6e6e6; background:transparent; min-height:200px; max-height:420px; overflow:auto }
+/* Módulo 1.7 - Contenedor de tabla con scroll */
+#tableWrap{ 
+  width:100%; 
+  margin-top:10px; 
+  border-radius:8px; 
+  border:1px solid var(--input-border); 
+  background:transparent; 
+  min-height:200px; 
+  max-height:420px; 
+  overflow:auto;
+}
 
-/* Módulo 1.7 - Table styles y sticky headers */
+/* Módulo 1.8 - Estilos de tabla */
 table{border-collapse:collapse;width:100%}
-th, td{padding:6px 8px;border:1px solid #e2e2e2; white-space:nowrap; font-family:monospace; font-size:13px; height:var(--row-height)}
-thead th{height:var(--th-height); background:var(--header-bg); position:sticky; top:0; z-index:4}
-thead tr.filter-row th{ top: calc(var(--th-height)); background:#fbfbfb; z-index:5 } /* Módulo 1.7.1 - evita overlap */
+th, td{
+  padding:6px 8px;
+  border:1px solid var(--input-border); 
+  white-space:nowrap; 
+  font-family:monospace; 
+  font-size:13px; 
+  height:var(--row-height);
+}
+
+/* Módulo 1.8.1 - Headers sticky */
+thead th{
+  height:var(--th-height); 
+  background:var(--header-bg); 
+  position:sticky; 
+  top:0; 
+  z-index:4;
+  color:var(--fg);
+}
+thead tr.filter-row th{ 
+  top: calc(var(--th-height)); 
+  background:var(--header-bg); 
+  z-index:5;
+} 
+
+/* Módulo 1.8.2 - Filas alternadas */
 tbody tr:nth-child(even) td{background:var(--cell-even)}
 tbody tr:nth-child(odd) td{background:var(--cell-odd)}
+
+/* Módulo 1.8.3 - Indicadores de ordenamiento */
 th.order-asc::after{ content:" ↑"; color:var(--accent); font-weight:bold }
 th.order-desc::after{ content:" ↓"; color:var(--accent); font-weight:bold }
 
-/* Módulo 1.8 - Column filter input wrapper */
+/* Módulo 1.9 - Filtros por columna */
 .filter-col-wrap{ position:relative; }
-.filter-col{ width:100%; box-sizing:border-box; padding-right:28px; border-radius:4px; padding:4px 8px; }
+.filter-col{ 
+  width:100%; 
+  box-sizing:border-box; 
+  padding-right:28px; 
+  border-radius:4px; 
+  padding:4px 8px;
+  background:var(--input-bg);
+  color:var(--fg);
+  border:1px solid var(--input-border);
+}
 
-/* Módulo 1.9 - Clear (X) inside inputs - global and column */
-.clear-btn{ position:absolute; right:6px; top:50%; transform:translateY(-50%); border:0;background:transparent;color:var(--muted); cursor:pointer;font-size:14px;padding:2px; }
+/* Módulo 1.10 - Botones de limpiar (X) */
+.clear-btn{ 
+  position:absolute; 
+  right:6px; 
+  top:50%; 
+  transform:translateY(-50%); 
+  border:0;
+  background:transparent;
+  color:var(--muted); 
+  cursor:pointer;
+  font-size:14px;
+  padding:2px; 
+}
 .clear-btn:focus{outline:2px solid rgba(41,121,255,0.12)}
 
-/* Módulo 1.10 - Editable cell visual effect */
-.editable-cell{ background:#fffbe7 !important; border:1px dashed var(--accent) !important; box-shadow:0 0 0 3px rgba(41,121,255,0.06); }
-td.editable-cell:focus{ outline:2px solid rgba(41,121,255,0.16); }
+/* Módulo 1.11 - Celdas editables */
+.editable-cell{ 
+  background:#fffbe7 !important; 
+  border:1px dashed var(--accent) !important; 
+  box-shadow:0 0 0 3px rgba(41,121,255,0.06); 
+}
+td.editable-cell:focus{ 
+  outline:2px solid rgba(41,121,255,0.16); 
+}
+body.dark .editable-cell{
+  background:#3a3a1a !important;
+}
 
-/* Módulo 1.11 - Raw area */
-#rawDisplay{display:none;width:100%;min-height:160px;padding:10px;border:2px solid var(--input-border);border-radius:6px;white-space:pre;overflow:auto;background:inherit;color:inherit}
+/* Módulo 1.12 - Área de visualización raw */
+#rawDisplay{
+  display:none;
+  width:100%;
+  min-height:160px;
+  padding:10px;
+  border:2px solid var(--input-border);
+  border-radius:6px;
+  white-space:pre;
+  overflow:auto;
+  background:var(--input-bg);
+  color:var(--fg);
+}
 
-/* Responsive adjustments */
+/* Módulo 1.13 - Controles que se ocultan sin datos */
+.hide-without-data{
+  display:none;
+}
+.show-with-data{
+  display:flex;
+}
+
+/* Módulo 1.14 - Responsive */
 @media (max-width:720px){
   #drawer{width:100vw}
   thead tr.filter-row th{ top: calc(var(--th-height) + 2px) }
@@ -105,12 +280,12 @@ td.editable-cell:focus{ outline:2px solid rgba(41,121,255,0.16); }
     <textarea id="jsonin" aria-label="Área JSON" placeholder="Pega o escribe JSON aquí"></textarea>
   </div>
 
-  <!-- Módulo 2.3 - Acciones -->
+  <!-- Módulo 2.3 - Acciones principales -->
   <div class="row">
     <button id="clearBtn" aria-label="Limpiar JSON">Limpiar JSON</button>
 
     <label style="display:flex;align-items:center;gap:6px">
-      Separador:
+      <span id="separatorLabel">Separador:</span>
       <select id="separatorSelect" aria-label="Separador">
         <option value="	">Tab</option>
         <option value=",">,</option>
@@ -119,7 +294,7 @@ td.editable-cell:focus{ outline:2px solid rgba(41,121,255,0.16); }
     </label>
 
     <select id="downloadSelect" aria-label="Descargar" disabled>
-      <option value="">Descargar...</option>
+      <option value="" id="downloadOption">Descargar...</option>
       <option value="csv">CSV</option>
       <option value="xlsx">XLSX</option>
       <option value="txt">TXT</option>
@@ -129,18 +304,18 @@ td.editable-cell:focus{ outline:2px solid rgba(41,121,255,0.16); }
     <button id="copyBtn" disabled aria-label="Copiar tabla">Copiar tabla</button>
   </div>
 
-  <!-- Módulo 2.4 - Filtro global + botón editar -->
-  <div class="row" style="align-items:center; margin-top:10px;">
+  <!-- Módulo 2.4 - Filtro global y edición (se ocultan sin datos) -->
+  <div class="row hide-without-data" id="filterEditRow" style="align-items:center; margin-top:10px;">
     <div style="position:relative;flex:1;">
-      <input type="text" id="filterGlobal" class="filter-global" placeholder="Filtro global..." autocomplete="off" style="width:100%;padding:8px 36px;border-radius:6px;border:1px solid var(--input-border)" />
+      <input type="text" id="filterGlobal" class="filter-global" placeholder="Filtro global..." autocomplete="off" style="width:100%;padding:8px 36px;border-radius:6px;border:1px solid var(--input-border);background:var(--input-bg);color:var(--fg)" />
       <button id="filterGlobalClearBtn" class="clear-btn" title="Limpiar filtro global">✕</button>
     </div>
-    <button id="editBtn" aria-label="Editar tabla" disabled>✏️ Editar</button>
+    <button id="editBtn" aria-label="Editar tabla" disabled>✏️ <span id="editBtnText">Editar</span></button>
   </div>
 
-  <!-- Módulo 2.5 - Wrapper de tabla (CON SCROLL propio para sticky headers) -->
+  <!-- Módulo 2.5 - Wrapper de tabla -->
   <div id="tableWrap" aria-live="polite">
-    <!-- la tabla se renderiza aquí -->
+    <div style="padding:12px;color:var(--muted)" id="noDataMessage">No hay tabla para mostrar</div>
   </div>
 
   <!-- Módulo 2.6 - Área raw -->
@@ -149,14 +324,18 @@ td.editable-cell:focus{ outline:2px solid rgba(41,121,255,0.16); }
   </div>
 </div>
 
-<!-- Módulo 3.1 - Drawer / Configuración -->
+<!-- Módulo 3.1 - Drawer de configuración -->
 <div id="drawer" role="dialog" aria-label="Configuración">
   <div class="tab-bar">
-    <button class="tab-btn active" id="tabConfig">Configuración</button>
-    <button class="tab-btn" id="tabCustom">Tema personalizado</button>
+    <button class="tab-btn active" id="tabConfig">
+      <span id="tabConfigText">Configuración</span>
+    </button>
+    <button class="tab-btn" id="tabCustom">
+      <span id="tabCustomText">Tema personalizado</span>
+    </button>
   </div>
 
-  <!-- Módulo 3.2 - Contenido Configuración -->
+  <!-- Módulo 3.2 - Panel de configuración -->
   <div id="configContent" class="active">
     <!-- Módulo 3.2.1 - Tema rápido -->
     <div style="display:flex;gap:8px;margin-bottom:10px;">
@@ -164,50 +343,180 @@ td.editable-cell:focus{ outline:2px solid rgba(41,121,255,0.16); }
       <button id="themeDark" title="Modo oscuro">🌙</button>
     </div>
 
-    <!-- Módulo 3.2.2 - Idioma -->
-    <label>Idioma:
+    <!-- Módulo 3.2.2 - Selector de idioma -->
+    <label>
+      <span id="languageLabel">Idioma:</span>
       <select id="languageSelect" style="width:100%;margin-top:6px">
         <option value="es">Español</option>
         <option value="en">English</option>
       </select>
     </label>
 
-    <!-- Módulo 3.2.3 - Historial -->
+    <!-- Módulo 3.2.3 - Historial JSON -->
     <div style="margin-top:12px;">
-      <label>Historial JSON:
+      <label>
+        <span id="historyLabel">Historial JSON:</span>
         <select id="jsonHistorySelect" style="width:100%;margin-top:6px">
-          <option value="">-- Seleccionar JSON --</option>
+          <option value="" id="selectJsonOption">-- Seleccionar JSON --</option>
         </select>
       </label>
       <div style="display:flex;gap:6px;margin-top:6px;">
-        <button id="renameHistoryBtn">Renombrar</button>
-        <button id="deleteHistoryBtn" disabled>Eliminar</button>
+        <button id="loadHistoryBtn" disabled>
+          <span id="loadHistoryText">Cargar</span>
+        </button>
+        <button id="renameHistoryBtn">
+          <span id="renameHistoryText">Renombrar</span>
+        </button>
+        <button id="deleteHistoryBtn" disabled>
+          <span id="deleteHistoryText">Eliminar</span>
+        </button>
       </div>
     </div>
 
-    <!-- Módulo 3.2.4 - Web/Móvil -->
+    <!-- Módulo 3.2.4 - Modo Web/Móvil -->
     <div style="margin-top:12px;">
-      <button id="mobileSwitchBtn">Web / Móvil</button>
+      <button id="mobileSwitchBtn">
+        <span id="mobileSwitchText">Web / Móvil</span>
+      </button>
     </div>
   </div>
 
-  <!-- Módulo 3.3 - Panel Tema Personalizado -->
+  <!-- Módulo 3.3 - Panel de tema personalizado -->
   <div id="customPanel" style="display:none;">
-    <h4>Personalizar tema</h4>
-    <label>Fondo: <input type="color" id="bgColor"></label>
-    <label>Texto: <input type="color" id="textColor"></label>
-    <label>Tipografía: <input type="text" id="fontFamily" placeholder="Inter, Arial"></label>
-    <label>Celdas pares: <input type="color" id="cellEven"></label>
-    <label>Celdas impares: <input type="color" id="cellOdd"></label>
+    <h4 id="customThemeTitle">Personalizar tema</h4>
+    <label>
+      <span id="bgColorLabel">Fondo:</span> 
+      <input type="color" id="bgColor">
+    </label>
+    <label>
+      <span id="textColorLabel">Texto:</span> 
+      <input type="color" id="textColor">
+    </label>
+    <label>
+      <span id="fontFamilyLabel">Tipografía:</span> 
+      <input type="text" id="fontFamily" placeholder="Inter, Arial">
+    </label>
+    <label>
+      <span id="cellEvenLabel">Celdas pares:</span> 
+      <input type="color" id="cellEven">
+    </label>
+    <label>
+      <span id="cellOddLabel">Celdas impares:</span> 
+      <input type="color" id="cellOdd">
+    </label>
     <div style="margin-top:8px">
-      <button id="customDefaultBtn">Default</button>
+      <button id="customDefaultBtn">
+        <span id="customDefaultText">Default</span>
+      </button>
     </div>
   </div>
 </div>
 
-<!-- Módulo 4.1 - Script principal (comentarios numerados en español) -->
+<!-- Módulo 4.1 - Script principal -->
 <script>
-/* Módulo 4.1 - Variables globales (4.1.1 Dom, 4.1.2 Estado) */
+/* Módulo 4.1.1 - Traducciones multiidioma */
+const translations = {
+  es: {
+    // Módulo 4.1.1.1 - Textos de interfaz
+    clearJson: 'Limpiar JSON',
+    separator: 'Separador:',
+    download: 'Descargar...',
+    showRaw: 'Mostrar Raw',
+    hideRaw: 'Ocultar Raw',
+    copyTable: 'Copiar tabla',
+    globalFilter: 'Filtro global...',
+    edit: 'Editar',
+    save: 'Guardar',
+    noTable: 'No hay tabla para mostrar',
+    noResults: 'No hay resultados para el filtro',
+    invalidJson: 'JSON inválido',
+    
+    // Módulo 4.1.1.2 - Configuración
+    configuration: 'Configuración',
+    customTheme: 'Tema personalizado',
+    language: 'Idioma:',
+    jsonHistory: 'Historial JSON:',
+    selectJson: '-- Seleccionar JSON --',
+    load: 'Cargar',
+    rename: 'Renombrar',
+    delete: 'Eliminar',
+    webMobile: 'Web / Móvil',
+    
+    // Módulo 4.1.1.3 - Tema personalizado
+    customizeTheme: 'Personalizar tema',
+    background: 'Fondo:',
+    text: 'Texto:',
+    typography: 'Tipografía:',
+    evenCells: 'Celdas pares:',
+    oddCells: 'Celdas impares:',
+    default: 'Default',
+    
+    // Módulo 4.1.1.4 - Mensajes
+    copied: 'Copiado',
+    loading: 'Cargando...',
+    loadUrl: 'Cargar URL',
+    errorLoadingUrl: 'Error cargando URL',
+    loadJsonFromHistory: '¿Cargar este JSON desde el historial?',
+    selectJsonFromHistory: 'Selecciona un JSON del historial',
+    newName: 'Nuevo nombre:',
+    selectItemToDelete: 'Selecciona un elemento para eliminar',
+    deleteFromHistory: 'Eliminar este JSON del historial?',
+    resetThemeConfirm: '¿Restablecer el tema a los valores predeterminados?',
+    filterColumn: 'Filtrar...',
+    clearFilter: 'Limpiar'
+  },
+  en: {
+    // Módulo 4.1.1.5 - English interface texts
+    clearJson: 'Clear JSON',
+    separator: 'Separator:',
+    download: 'Download...',
+    showRaw: 'Show Raw',
+    hideRaw: 'Hide Raw',
+    copyTable: 'Copy table',
+    globalFilter: 'Global filter...',
+    edit: 'Edit',
+    save: 'Save',
+    noTable: 'No table to display',
+    noResults: 'No results for filter',
+    invalidJson: 'Invalid JSON',
+    
+    // Módulo 4.1.1.6 - Configuration
+    configuration: 'Configuration',
+    customTheme: 'Custom theme',
+    language: 'Language:',
+    jsonHistory: 'JSON History:',
+    selectJson: '-- Select JSON --',
+    load: 'Load',
+    rename: 'Rename',
+    delete: 'Delete',
+    webMobile: 'Web / Mobile',
+    
+    // Módulo 4.1.1.7 - Custom theme
+    customizeTheme: 'Customize theme',
+    background: 'Background:',
+    text: 'Text:',
+    typography: 'Typography:',
+    evenCells: 'Even cells:',
+    oddCells: 'Odd cells:',
+    default: 'Default',
+    
+    // Módulo 4.1.1.8 - Messages
+    copied: 'Copied',
+    loading: 'Loading...',
+    loadUrl: 'Load URL',
+    errorLoadingUrl: 'Error loading URL',
+    loadJsonFromHistory: 'Load this JSON from history?',
+    selectJsonFromHistory: 'Select a JSON from history',
+    newName: 'New name:',
+    selectItemToDelete: 'Select an item to delete',
+    deleteFromHistory: 'Delete this JSON from history?',
+    resetThemeConfirm: 'Reset theme to default values?',
+    filterColumn: 'Filter...',
+    clearFilter: 'Clear'
+  }
+};
+
+/* Módulo 4.1.2 - Variables globales del DOM */
 const el = {
   urlIn: document.getElementById('urlIn'),
   fetchBtn: document.getElementById('fetchBtn'),
@@ -232,6 +541,7 @@ const el = {
   themeDark: document.getElementById('themeDark'),
   languageSelect: document.getElementById('languageSelect'),
   jsonHistorySelect: document.getElementById('jsonHistorySelect'),
+  loadHistoryBtn: document.getElementById('loadHistoryBtn'),
   deleteHistoryBtn: document.getElementById('deleteHistoryBtn'),
   renameHistoryBtn: document.getElementById('renameHistoryBtn'),
   mobileSwitchBtn: document.getElementById('mobileSwitchBtn'),
@@ -241,43 +551,63 @@ const el = {
   cellEven: document.getElementById('cellEven'),
   cellOdd: document.getElementById('cellOdd'),
   customDefaultBtn: document.getElementById('customDefaultBtn'),
-  loadingAnim: document.getElementById('loadingAnim')
+  filterEditRow: document.getElementById('filterEditRow'),
+  noDataMessage: document.getElementById('noDataMessage')
 };
 
+/* Módulo 4.1.3 - Estado global de la aplicación */
 const state = {
-  originalParsed: null,     // Módulo 4.1.3 - objeto JSON original (para reconstruir)
-  originalRows: [],         // Módulo 4.1.4 - rows flatten
-  currentRows: [],          // Módulo 4.1.5 - current working rows (after filters/sort)
-  currentHeaders: [],
-  sortState: {},            // {col: 'asc'|'desc'}
-  editing: false,
-  columnFilters: {},        // {colKey: value}
-  history: [],              // {hash,name,data,date}
-  mobileMode: (localStorage.getItem('mobileMode') === 'true'),
-  virtualStart: 0,          // Módulo 4.1.6 - virtual scrolling start index
-  rowHeight: 32,            // Módulo 4.1.7 - estimated row height
-  visibleCount: 0,          // Módulo 4.1.8 - number of rows visible
-  filterDebounceMs: 200     // Módulo 4.1.9 - debounce for filters
+  originalParsed: null,     // Módulo 4.1.3.1 - JSON original parseado
+  originalRows: [],         // Módulo 4.1.3.2 - Filas aplanadas originales
+  currentRows: [],          // Módulo 4.1.3.3 - Filas actuales (filtradas/ordenadas)
+  currentHeaders: [],       // Módulo 4.1.3.4 - Headers actuales
+  sortState: {},            // Módulo 4.1.3.5 - Estado de ordenamiento {col: 'asc'|'desc'}
+  editing: false,           // Módulo 4.1.3.6 - Modo edición activo
+  columnFilters: {},        // Módulo 4.1.3.7 - Filtros por columna {colKey: value}
+  history: [],              // Módulo 4.1.3.8 - Historial {hash,name,data,date}
+  mobileMode: false,        // Módulo 4.1.3.9 - Modo móvil
+  virtualStart: 0,          // Módulo 4.1.3.10 - Inicio del scroll virtual
+  rowHeight: 32,            // Módulo 4.1.3.11 - Altura estimada de fila
+  visibleCount: 0,          // Módulo 4.1.3.12 - Número de filas visibles
+  filterDebounceMs: 200,    // Módulo 4.1.3.13 - Debounce para filtros
+  lastParsedFull: null,     // Módulo 4.1.3.14 - JSON completo parseado
+  currentLanguage: 'es'     // Módulo 4.1.3.15 - Idioma actual
 };
 
-/* Módulo 4.2 - Utilidades (4.2.1 SHA-1, 4.2.2 flatten, 4.2.3 unflatten, 4.2.4 CSV) */
+/* Módulo 4.2 - Funciones de utilidad */
+
+/* Módulo 4.2.1 - Función SHA-1 para hash */
 async function sha1(str){
   const enc = new TextEncoder();
   const buf = await crypto.subtle.digest('SHA-1', enc.encode(str));
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
-function isObj(x){ return x && typeof x === 'object' && !Array.isArray(x); }
+
+/* Módulo 4.2.2 - Verificar si es objeto */
+function isObj(x){ 
+  return x && typeof x === 'object' && !Array.isArray(x); 
+}
+
+/* Módulo 4.2.3 - Aplanar objeto preservando tipos */
 function flattenObject(obj, prefix='', out={}){
-  if(Array.isArray(obj)){ out[prefix.slice(0,-1)||'array']=JSON.stringify(obj); return out; }
+  if(Array.isArray(obj)){ 
+    out[prefix.slice(0,-1)||'array']=JSON.stringify(obj); 
+    return out; 
+  }
   for(const k of Object.keys(obj||{})){
     const v = obj[k], key = prefix + k + '.';
-    if(isObj(v)) flattenObject(v, key, out);
-    else if(Array.isArray(v)) out[key.slice(0,-1)] = JSON.stringify(v);
-    else out[key.slice(0,-1)] = v;
+    if(isObj(v)) {
+      flattenObject(v, key, out);
+    } else if(Array.isArray(v)) {
+      out[key.slice(0,-1)] = JSON.stringify(v);
+    } else {
+      out[key.slice(0,-1)] = v;
+    }
   }
   return out;
 }
-/* Módulo 4.2.3 - Unflatten: reconstruye objeto desde keys con puntos */
+
+/* Módulo 4.2.4 - Reconstruir objeto desde claves aplanadas preservando tipos */
 function unflattenObject(flat){
   const res = {};
   for(const flatKey of Object.keys(flat || {})){
@@ -286,10 +616,41 @@ function unflattenObject(flat){
     for(let i=0;i<parts.length;i++){
       const p = parts[i];
       if(i === parts.length - 1){
-        // intenta parsear JSON (arrays o objetos) si value parece JSON
         const val = flat[flatKey];
-        if(typeof val === 'string' && (val.trim().startsWith('[') || val.trim().startsWith('{'))){
-          try{ cur[p] = JSON.parse(val); continue; }catch(e){}
+        if(typeof val === 'string'){
+          // Módulo 4.2.4.1 - Intentar parsear JSON (arrays/objetos)
+          if(val.trim().startsWith('[') || val.trim().startsWith('{')){
+            try{ 
+              cur[p] = JSON.parse(val); 
+              continue; 
+            }catch(e){}
+          }
+          // Módulo 4.2.4.2 - Intentar convertir a número
+          if(!isNaN(val) && !isNaN(parseFloat(val)) && val.trim() !== ''){
+            const num = parseFloat(val);
+            if(num.toString() === val.trim()){
+              cur[p] = num;
+              continue;
+            }
+          }
+          // Módulo 4.2.4.3 - Intentar convertir a booleano
+          if(val.toLowerCase() === 'true'){
+            cur[p] = true;
+            continue;
+          }
+          if(val.toLowerCase() === 'false'){
+            cur[p] = false;
+            continue;
+          }
+          // Módulo 4.2.4.4 - Verificar null/undefined
+          if(val.toLowerCase() === 'null'){
+            cur[p] = null;
+            continue;
+          }
+          if(val.toLowerCase() === 'undefined'){
+            cur[p] = undefined;
+            continue;
+          }
         }
         cur[p] = val;
       } else {
@@ -300,13 +661,13 @@ function unflattenObject(flat){
   }
   return res;
 }
+
+/* Módulo 4.2.5 - Obtener filas desde JSON parseado */
 function getRowsFromJson(parsed){
-  // guarda parsed para reconstrucción
   if(Array.isArray(parsed)){
     state.originalParsed = { type: 'array' };
     return parsed.map(o=>flattenObject(o));
   }
-  // si objeto con arrays en sus keys, intenta encontrar primer array
   for(const k of Object.keys(parsed || {})){
     if(Array.isArray(parsed[k])){
       state.originalParsed = { type: 'rootKeyArray', key: k, template: parsed };
@@ -316,46 +677,143 @@ function getRowsFromJson(parsed){
   state.originalParsed = { type: 'object' };
   return [flattenObject(parsed)];
 }
+
+/* Módulo 4.2.6 - Intentar parsear JSON con limpieza */
 function tryParseJson(text){
-  try{ return JSON.parse(text); }catch{
+  try{ 
+    return JSON.parse(text); 
+  }catch{
     try {
       const clean = text.replace(/(['"])?([a-zA-Z0-9_]+)(['"])?\s*:/g, '"$2":');
       return JSON.parse(clean);
-    }catch{ return null; }
+    }catch{ 
+      return null; 
+    }
   }
 }
+
+/* Módulo 4.2.7 - Generar nombre de archivo dinámico */
 function dynamicFilename(ext){
   const d = new Date();
   const pad = n=> (n<10?'0':'')+n;
   return `JSON_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.${ext}`;
 }
+
+/* Módulo 4.2.8 - Convertir filas a CSV */
 function rowsToCsv(rows, sep){
   if(!rows.length) return '';
-  const keys = Array.from(rows.reduce((s,r)=>{ Object.keys(r).forEach(k=>s.add(k)); return s; }, new Set()));
+  const keys = Array.from(rows.reduce((s,r)=>{ 
+    Object.keys(r).forEach(k=>s.add(k)); 
+    return s; 
+  }, new Set()));
   const esc = v=>{
     if(v==null) return '';
     const s = String(v);
-    if(s.includes('"') || s.includes('\n') || s.includes(sep)) return `"${s.replace(/"/g,'""')}"`;
+    if(s.includes('"') || s.includes('\n') || s.includes(sep)) {
+      return `"${s.replace(/"/g,'""')}"`;
+    }
     return s;
   };
   const lines = [keys.join(sep)];
-  for(const r of rows) lines.push(keys.map(k=>esc(r[k])).join(sep));
+  for(const r of rows) {
+    lines.push(keys.map(k=>esc(r[k])).join(sep));
+  }
   return lines.join('\n');
 }
 
-/* Módulo 4.3 - Persistencia: historial + lastJson + tema + mode (4.3.1 guardar/cargar) */
-function saveHistory(){ try{ localStorage.setItem('jsonHistory', JSON.stringify(state.history)); }catch(e){ console.warn(e); } }
+/* Módulo 4.2.9 - Escapar HTML */
+function escapeHtml(s){ 
+  return (s||'').replace(/[&<>"']/g, c=>({ 
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' 
+  })[c]); 
+}
+
+/* Módulo 4.2.10 - Escapar atributos */
+function escapeAttribute(s){ 
+  return (s||'').replace(/"/g,'&quot;'); 
+}
+
+/* Módulo 4.3 - Sistema de traducciones */
+
+/* Módulo 4.3.1 - Obtener texto traducido */
+function t(key){
+  return translations[state.currentLanguage][key] || key;
+}
+
+/* Módulo 4.3.2 - Actualizar textos de la interfaz */
+function updateUITexts(){
+  // Módulo 4.3.2.1 - Botones principales
+  el.clearBtn.textContent = t('clearJson');
+  document.getElementById('separatorLabel').textContent = t('separator');
+  document.getElementById('downloadOption').textContent = t('download');
+  el.toggleRawBtn.textContent = t('showRaw');
+  el.copyBtn.textContent = t('copyTable');
+  el.filterGlobal.placeholder = t('globalFilter');
+  document.getElementById('editBtnText').textContent = state.editing ? t('save') : t('edit');
+  document.getElementById('noDataMessage').textContent = t('noTable');
+  
+  // Módulo 4.3.2.2 - Configuración
+  document.getElementById('tabConfigText').textContent = t('configuration');
+  document.getElementById('tabCustomText').textContent = t('customTheme');
+  document.getElementById('languageLabel').textContent = t('language');
+  document.getElementById('historyLabel').textContent = t('jsonHistory');
+  document.getElementById('selectJsonOption').textContent = t('selectJson');
+  document.getElementById('loadHistoryText').textContent = t('load');
+  document.getElementById('renameHistoryText').textContent = t('rename');
+  document.getElementById('deleteHistoryText').textContent = t('delete');
+  document.getElementById('mobileSwitchText').textContent = t('webMobile');
+  
+  // Módulo 4.3.2.3 - Tema personalizado
+  document.getElementById('customThemeTitle').textContent = t('customizeTheme');
+  document.getElementById('bgColorLabel').textContent = t('background');
+  document.getElementById('textColorLabel').textContent = t('text');
+  document.getElementById('fontFamilyLabel').textContent = t('typography');
+  document.getElementById('cellEvenLabel').textContent = t('evenCells');
+  document.getElementById('cellOddLabel').textContent = t('oddCells');
+  document.getElementById('customDefaultText').textContent = t('default');
+  
+  // Módulo 4.3.2.4 - Actualizar historial
+  renderHistoryDropdown();
+}
+
+/* Módulo 4.3.3 - Cambiar idioma */
+function changeLanguage(lang){
+  state.currentLanguage = lang;
+  localStorage.setItem('language', lang);
+  updateUITexts();
+  // Módulo 4.3.3.1 - Re-renderizar tabla para actualizar filtros
+  if(state.currentRows.length > 0){
+    renderTable();
+  }
+}
+
+/* Módulo 4.4 - Persistencia de datos */
+
+/* Módulo 4.4.1 - Guardar historial */
+function saveHistory(){ 
+  try{ 
+    localStorage.setItem('jsonHistory', JSON.stringify(state.history)); 
+  }catch(e){ 
+    console.warn(e); 
+  } 
+}
+
+/* Módulo 4.4.2 - Cargar historial */
 function loadHistory(){
   try{
     const raw = localStorage.getItem('jsonHistory');
     if(!raw) return;
     state.history = JSON.parse(raw) || [];
     renderHistoryDropdown();
-  }catch(e){ console.warn('loadHistory', e); }
+  }catch(e){ 
+    console.warn('loadHistory', e); 
+  }
 }
+
+/* Módulo 4.4.3 - Renderizar dropdown de historial */
 function renderHistoryDropdown(){
   const sel = el.jsonHistorySelect;
-  sel.innerHTML = '<option value="">-- Seleccionar JSON --</option>';
+  sel.innerHTML = `<option value="">${t('selectJson')}</option>`;
   state.history.forEach((it, idx)=>{
     const opt = document.createElement('option');
     opt.value = idx;
@@ -364,7 +822,7 @@ function renderHistoryDropdown(){
   });
 }
 
-/* Módulo 4.4 - Añadir al historial con dedupe (4.4.1) */
+/* Módulo 4.4.4 - Añadir al historial con deduplicación */
 async function addToHistory(jsonStr, name){
   if(!jsonStr || !jsonStr.trim()) return;
   const h = await sha1(jsonStr);
@@ -372,30 +830,51 @@ async function addToHistory(jsonStr, name){
   if(idx >= 0){
     state.history[idx].date = new Date().toISOString();
   } else {
-    state.history.push({ hash: h, data: jsonStr, name: name || ('JSON ' + (state.history.length+1)), date: new Date().toISOString() });
+    state.history.push({ 
+      hash: h, 
+      data: jsonStr, 
+      name: name || ('JSON ' + (state.history.length+1)), 
+      date: new Date().toISOString() 
+    });
     if(state.history.length > 200) state.history.shift();
   }
   saveHistory();
   renderHistoryDropdown();
 }
 
-/* Módulo 4.5 - Botones UI: habilitar/deshabilitar estado (4.5.1) */
+/* Módulo 4.5 - Control de estado de botones */
+
+/* Módulo 4.5.1 - Actualizar estado de botones de acción */
 function updateActionButtons(){
-  const hasData = state.currentRows && state.currentRows.length>0;
+  const hasData = state.currentRows && state.currentRows.length > 0;
+  
+  // Módulo 4.5.1.1 - Botones que dependen de datos
   el.downloadSelect.disabled = !hasData;
   el.toggleRawBtn.disabled = !hasData;
   el.copyBtn.disabled = !hasData;
   el.editBtn.disabled = !hasData;
   el.filterGlobal.disabled = !hasData;
+  
+  // Módulo 4.5.1.2 - Botón limpiar depende del contenido del textarea
   el.clearBtn.disabled = !el.jsonin.value.trim();
+  
+  // Módulo 4.5.1.3 - Botones de historial
   el.deleteHistoryBtn.disabled = el.jsonHistorySelect.value === '';
+  el.loadHistoryBtn.disabled = el.jsonHistorySelect.value === '';
+  
+  // Módulo 4.5.1.4 - Mostrar/ocultar controles según datos
+  if(hasData){
+    el.filterEditRow.classList.remove('hide-without-data');
+    el.filterEditRow.classList.add('show-with-data');
+  } else {
+    el.filterEditRow.classList.add('hide-without-data');
+    el.filterEditRow.classList.remove('show-with-data');
+  }
 }
 
-/* Módulo 4.6 - Drawer/tabs (4.6.1 mostrar solo panel activo) */
-el.configBtn.addEventListener('click', ()=> {
-  el.drawer.classList.toggle('open');
-  showConfigTab();
-});
+/* Módulo 4.6 - Gestión del drawer de configuración */
+
+/* Módulo 4.6.1 - Mostrar pestaña de configuración */
 function showConfigTab(){
   el.tabConfig.classList.add('active');
   el.tabCustom.classList.remove('active');
@@ -404,6 +883,8 @@ function showConfigTab(){
   el.customPanel.style.display = 'none';
   el.customPanel.classList.remove('active');
 }
+
+/* Módulo 4.6.2 - Mostrar pestaña de tema personalizado */
 function showCustomTab(){
   el.tabCustom.classList.add('active');
   el.tabConfig.classList.remove('active');
@@ -412,10 +893,10 @@ function showCustomTab(){
   el.customPanel.style.display = 'block';
   el.customPanel.classList.add('active');
 }
-el.tabConfig.addEventListener('click', showConfigTab);
-el.tabCustom.addEventListener('click', showCustomTab);
 
-/* Módulo 4.7 - Tema personalizado en tiempo real y persistente (4.7.1 carga/guardado) */
+/* Módulo 4.7 - Sistema de temas personalizados */
+
+/* Módulo 4.7.1 - Aplicar tema personalizado */
 function applyCustomTheme(colors){
   if(colors.bg) document.documentElement.style.setProperty('--bg', colors.bg);
   if(colors.text) document.documentElement.style.setProperty('--fg', colors.text);
@@ -423,6 +904,8 @@ function applyCustomTheme(colors){
   if(colors.cellOdd) document.documentElement.style.setProperty('--cell-odd', colors.cellOdd);
   if(colors.font) document.body.style.fontFamily = colors.font;
 }
+
+/* Módulo 4.7.2 - Cargar tema personalizado */
 function loadCustomTheme(){
   try{
     const raw = localStorage.getItem('customTheme');
@@ -441,84 +924,97 @@ function loadCustomTheme(){
       el.cellEven.value = '#f9f9f9';
       el.cellOdd.value = '#eef3ff';
     }
-  }catch(e){ console.warn(e); }
+  }catch(e){ 
+    console.warn(e); 
+  }
 }
+
+/* Módulo 4.7.3 - Guardar tema personalizado */
 function saveCustomTheme(){
-  const c = { bg: el.bgColor.value, text: el.textColor.value, font: el.fontFamily.value, cellEven: el.cellEven.value, cellOdd: el.cellOdd.value};
+  const c = { 
+    bg: el.bgColor.value, 
+    text: el.textColor.value, 
+    font: el.fontFamily.value, 
+    cellEven: el.cellEven.value, 
+    cellOdd: el.cellOdd.value
+  };
   localStorage.setItem('customTheme', JSON.stringify(c));
   applyCustomTheme(c);
 }
-['bgColor','textColor','fontFamily','cellEven','cellOdd'].forEach(id=>{
-  const node = el[id] || document.getElementById(id);
-  if(node){
-    node.addEventListener('input', ()=>{
-      saveCustomTheme();
-    });
-  }
-});
-el.customDefaultBtn.addEventListener('click', ()=>{
-  if(!confirm('¿Restablecer el tema a los valores predeterminados?')) return;
-  localStorage.removeItem('customTheme');
-  el.bgColor.value = '#ffffff';
-  el.textColor.value = '#111111';
-  el.fontFamily.value = '';
-  el.cellEven.value = '#f9f9f9';
-  el.cellOdd.value = '#eef3ff';
-  applyCustomTheme({bg:'#ffffff', text:'#111111', font:'', cellEven:'#f9f9f9', cellOdd:'#eef3ff'});
-});
 
-/* Módulo 4.8 - Modo Web/Móvil (persistente) */
+/* Módulo 4.8 - Modo móvil */
+
+/* Módulo 4.8.1 - Habilitar/deshabilitar modo móvil */
 function enableMobileMode(flag){
   state.mobileMode = !!flag;
   document.body.classList.toggle('mobile', !!flag);
   localStorage.setItem('mobileMode', state.mobileMode ? 'true' : 'false');
 }
-el.mobileSwitchBtn.addEventListener('click', ()=>{
-  enableMobileMode(!state.mobileMode);
-});
 
-/* Módulo 4.9 - Control del botón cargar URL (4.9.1 desactivar si vacío) */
+/* Módulo 4.9 - Control de carga de URL */
+
+/* Módulo 4.9.1 - Actualizar estado del botón fetch */
 function updateFetchButtonState(){
   el.fetchBtn.disabled = !el.urlIn.value.trim();
 }
-el.urlIn.addEventListener('input', updateFetchButtonState);
-updateFetchButtonState();
 
-/* Módulo 4.10 - Parseo JSON, generar filas y guardar lastJson (4.10.1, 4.10.2) */
+/* Módulo 4.10 - Procesamiento de JSON */
+
+/* Módulo 4.10.1 - Parsear entrada JSON */
 async function parseJsonInput(addToHist){
   const txt = el.jsonin.value || '';
   if(!txt.trim()){
+    // Módulo 4.10.1.1 - Limpiar estado sin datos
     state.originalParsed = null;
-    state.originalRows = []; state.currentRows = []; state.currentHeaders = [];
-    el.tableWrap.innerHTML = '<div style="padding:12px;color:var(--muted)">No hay tabla para mostrar</div>';
+    state.originalRows = []; 
+    state.currentRows = []; 
+    state.currentHeaders = [];
+    el.tableWrap.innerHTML = `<div style="padding:12px;color:var(--muted)">${t('noTable')}</div>`;
     updateActionButtons();
     return;
   }
+  
   const parsed = tryParseJson(txt);
   if(!parsed){
+    // Módulo 4.10.1.2 - JSON inválido
     el.jsonin.classList.add('error');
-    state.originalRows = []; state.currentRows = [];
-    el.tableWrap.innerHTML = '<div style="padding:12px;color:var(--error)">JSON inválido</div>';
+    state.originalRows = []; 
+    state.currentRows = [];
+    el.tableWrap.innerHTML = `<div style="padding:12px;color:var(--error)">${t('invalidJson')}</div>`;
     updateActionButtons();
     return;
   } else {
     el.jsonin.classList.remove('error');
   }
+  
+  // Módulo 4.10.1.3 - Procesar JSON válido
   const rows = getRowsFromJson(parsed);
   state.originalRows = rows;
   state.currentRows = rows.slice();
+  state.lastParsedFull = parsed;
+  
   if(addToHist) await addToHistory(txt);
   localStorage.setItem('lastJson', txt);
-  state.originalParsed = parsed;
-  // reset virtual scrolling start
+  
+  // Módulo 4.10.1.4 - Reset scroll virtual
   state.virtualStart = 0;
   computeVisibleCount();
   renderTable();
   updateActionButtons();
 }
-function saveLastJson(){ try{ localStorage.setItem('lastJson', el.jsonin.value || ''); }catch(e){console.warn(e);} }
 
-/* Módulo 4.11 - Debounce helper (4.11.1) */
+/* Módulo 4.10.2 - Guardar último JSON */
+function saveLastJson(){ 
+  try{ 
+    localStorage.setItem('lastJson', el.jsonin.value || ''); 
+  }catch(e){
+    console.warn(e);
+  } 
+}
+
+/* Módulo 4.11 - Utilidades de debounce */
+
+/* Módulo 4.11.1 - Función debounce */
 function debounce(fn, ms){
   let t;
   return function(...args){
@@ -527,24 +1023,35 @@ function debounce(fn, ms){
   };
 }
 
-/* Módulo 4.12 - Virtual scrolling calculations (4.12.1) */
+/* Módulo 4.12 - Scroll virtual */
+
+/* Módulo 4.12.1 - Calcular filas visibles */
 function computeVisibleCount(){
   const h = el.tableWrap.clientHeight || 420;
   state.visibleCount = Math.ceil(h / state.rowHeight) + 6; // buffer
 }
 
-/* Módulo 4.13 - Render de la tabla con virtual scrolling (4.13.1 filtros, 4.13.2 headers sticky) */
+/* Módulo 4.13 - Renderizado de tabla */
+
+/* Módulo 4.13.1 - Renderizar tabla principal */
 function renderTable(){
   const rows = state.currentRows || [];
+  
   if(!rows.length){
-    // Show headers if possible (we need to compute headers from originalRows)
-    const keys = state.originalRows.length ? Array.from(state.originalRows.reduce((s,r)=>{ Object.keys(r).forEach(k=>s.add(k)); return s; }, new Set())) : [];
+    // Módulo 4.13.1.1 - Mostrar headers si es posible
+    const keys = state.originalRows.length ? 
+      Array.from(state.originalRows.reduce((s,r)=>{ 
+        Object.keys(r).forEach(k=>s.add(k)); 
+        return s; 
+      }, new Set())) : [];
+      
     if(!keys.length){
-      el.tableWrap.innerHTML = '<div style="padding:12px;color:var(--muted)">No hay tabla para mostrar</div>';
+      el.tableWrap.innerHTML = `<div style="padding:12px;color:var(--muted)">${t('noTable')}</div>`;
       updateActionButtons();
       return;
     }
-    // Render table with headers + filter row and empty tbody
+    
+    // Módulo 4.13.1.2 - Renderizar tabla con headers vacía
     const html = buildTableHtml([], keys, true);
     el.tableWrap.innerHTML = html;
     attachTableEvents();
@@ -552,51 +1059,69 @@ function renderTable(){
     return;
   }
 
-  // apply filters (global + column)
+  // Módulo 4.13.1.3 - Aplicar filtros
   const globalVal = (el.filterGlobal.value || '').toLowerCase();
   let filtered = rows.filter(r=>{
     if(globalVal){
-      if(!Object.values(r).some(v=>String(v||'').toLowerCase().includes(globalVal))) return false;
+      if(!Object.values(r).some(v=>String(v||'').toLowerCase().includes(globalVal))) {
+        return false;
+      }
     }
     for(const [col, val] of Object.entries(state.columnFilters || {})){
-      if(val && !(String((r[col]||'')).toLowerCase().includes(val.toLowerCase()))) return false;
+      if(val && !(String((r[col]||'')).toLowerCase().includes(val.toLowerCase()))) {
+        return false;
+      }
     }
     return true;
   });
 
-  // compute keys from filtered or all rows
-  const keys = Array.from((filtered.length ? filtered : rows).reduce((s,r)=>{ Object.keys(r).forEach(k=>s.add(k)); return s; }, new Set()));
+  // Módulo 4.13.1.4 - Calcular headers
+  const keys = Array.from((filtered.length ? filtered : rows).reduce((s,r)=>{ 
+    Object.keys(r).forEach(k=>s.add(k)); 
+    return s; 
+  }, new Set()));
   state.currentHeaders = keys;
 
-  // virtual scrolling: compute start based on scrollTop
+  // Módulo 4.13.1.5 - Scroll virtual
   const scrollTop = el.tableWrap.scrollTop || 0;
   state.virtualStart = Math.max(0, Math.floor(scrollTop / state.rowHeight) - 3);
   computeVisibleCount();
   const visibleRows = filtered.slice(state.virtualStart, state.virtualStart + state.visibleCount);
 
-  // build HTML with headers + filter row + tbody containing only visible rows + spacer rows
+  // Módulo 4.13.1.6 - Calcular espaciadores
   const topSpacerHeight = state.virtualStart * state.rowHeight;
   const bottomSpacerHeight = Math.max(0, (filtered.length - state.virtualStart - visibleRows.length) * state.rowHeight);
 
+  // Módulo 4.13.1.7 - Construir HTML
   let html = '';
   html += `<table><thead><tr>`;
   keys.forEach(k => {
-    const cls = (state.sortState[k] === 'asc') ? 'order-asc' : (state.sortState[k] === 'desc') ? 'order-desc' : '';
+    const cls = (state.sortState[k] === 'asc') ? 'order-asc' : 
+                (state.sortState[k] === 'desc') ? 'order-desc' : '';
     html += `<th class="${cls}" data-col="${encodeURIComponent(k)}">${escapeHtml(k)}</th>`;
   });
   html += `</tr>`;
 
-  // filter row
+  // Módulo 4.13.1.8 - Fila de filtros
   html += '<tr class="filter-row">';
   keys.forEach(k=>{
     const val = state.columnFilters[k] || '';
-    html += `<th><span class="filter-col-wrap"><input class="filter-col" data-col="${encodeURIComponent(k)}" value="${escapeAttribute(val)}" placeholder="Filtrar..." /><button class="clear-btn filter-col-clear" data-col="${encodeURIComponent(k)}" title="Limpiar">✕</button></span></th>`;
+    html += `<th><span class="filter-col-wrap">
+      <input class="filter-col" data-col="${encodeURIComponent(k)}" 
+             value="${escapeAttribute(val)}" placeholder="${t('filterColumn')}" />
+      <button class="clear-btn filter-col-clear" data-col="${encodeURIComponent(k)}" 
+              title="${t('clearFilter')}">✕</button>
+    </span></th>`;
   });
   html += '</tr></thead><tbody>';
-  // top spacer
-  html += `<tr style="height:${topSpacerHeight}px"><td style="padding:0;border:none" colspan="${keys.length}"></td></tr>`;
+  
+  // Módulo 4.13.1.9 - Espaciador superior
+  html += `<tr style="height:${topSpacerHeight}px">
+    <td style="padding:0;border:none" colspan="${keys.length}"></td>
+  </tr>`;
 
   if(visibleRows.length){
+    // Módulo 4.13.1.10 - Filas visibles
     visibleRows.forEach((r, idx)=>{
       html += '<tr>';
       keys.forEach(k=>{
@@ -606,79 +1131,128 @@ function renderTable(){
       html += '</tr>';
     });
   } else {
-    // No results but keep headers and filter row visible; show empty message row
-    html += `<tr><td colspan="${keys.length}" style="padding:12px;color:var(--muted)">No hay resultados para el filtro</td></tr>`;
+    // Módulo 4.13.1.11 - Sin resultados
+    html += `<tr><td colspan="${keys.length}" style="padding:12px;color:var(--muted)">
+      ${t('noResults')}
+    </td></tr>`;
   }
 
-  // bottom spacer
-  html += `<tr style="height:${bottomSpacerHeight}px"><td style="padding:0;border:none" colspan="${keys.length}"></td></tr>`;
+  // Módulo 4.13.1.12 - Espaciador inferior
+  html += `<tr style="height:${bottomSpacerHeight}px">
+    <td style="padding:0;border:none" colspan="${keys.length}"></td>
+  </tr>`;
   html += `</tbody></table>`;
 
   el.tableWrap.innerHTML = html;
-
   attachTableEvents(filtered);
-
   updateActionButtons();
 }
 
-/* Módulo 4.14 - Attach events for headers, filters, clear buttons, virtualization scroll, editing (4.14.1) */
+/* Módulo 4.13.2 - Construir HTML de tabla (función auxiliar) */
+function buildTableHtml(rows, keys, showFilters = false){
+  let html = `<table><thead><tr>`;
+  keys.forEach(k => {
+    const cls = (state.sortState[k] === 'asc') ? 'order-asc' : 
+                (state.sortState[k] === 'desc') ? 'order-desc' : '';
+    html += `<th class="${cls}" data-col="${encodeURIComponent(k)}">${escapeHtml(k)}</th>`;
+  });
+  html += `</tr>`;
+  
+  if(showFilters){
+    html += '<tr class="filter-row">';
+    keys.forEach(k=>{
+      const val = state.columnFilters[k] || '';
+      html += `<th><span class="filter-col-wrap">
+        <input class="filter-col" data-col="${encodeURIComponent(k)}" 
+               value="${escapeAttribute(val)}" placeholder="${t('filterColumn')}" />
+        <button class="clear-btn filter-col-clear" data-col="${encodeURIComponent(k)}" 
+                title="${t('clearFilter')}">✕</button>
+      </span></th>`;
+    });
+    html += '</tr>';
+  }
+  
+  html += '</thead><tbody>';
+  if(!rows.length){
+    html += `<tr><td colspan="${keys.length}" style="padding:12px;color:var(--muted)">
+      ${t('noTable')}
+    </td></tr>`;
+  }
+  html += '</tbody></table>';
+  return html;
+}
+
+/* Módulo 4.14 - Eventos de tabla */
+
+/* Módulo 4.14.1 - Adjuntar eventos a elementos de tabla */
 function attachTableEvents(filteredRows){
-  // header sort
+  // Módulo 4.14.1.1 - Eventos de ordenamiento en headers
   el.tableWrap.querySelectorAll('th[data-col]').forEach(th=>{
     th.onclick = ()=>{
       const col = decodeURIComponent(th.dataset.col);
       const dir = (state.sortState[col] === 'asc') ? 'desc' : 'asc';
-      state.sortState = {}; state.sortState[col] = dir;
+      state.sortState = {}; 
+      state.sortState[col] = dir;
+      
       state.currentRows.sort((a,b)=>{
         const va = a[col], vb = b[col];
-        if(va==null) return 1; if(vb==null) return -1;
-        if(!isNaN(va) && !isNaN(vb)) return dir==='asc' ? va - vb : vb - va;
-        return dir==='asc' ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
+        if(va==null) return 1; 
+        if(vb==null) return -1;
+        if(!isNaN(va) && !isNaN(vb)) {
+          return dir==='asc' ? va - vb : vb - va;
+        }
+        return dir==='asc' ? 
+          String(va).localeCompare(String(vb)) : 
+          String(vb).localeCompare(String(va));
       });
-      // reset scroll to top to show changes
+      
       el.tableWrap.scrollTop = 0;
       renderTable();
     };
   });
 
-   // filter inputs events with debounce
-  const deb = debounce(function(inp){
-    const col = decodeURIComponent(inp.dataset.col);
-    state.columnFilters[col] = inp.value;
+  // Módulo 4.14.1.2 - Eventos de filtros por columna con debounce mejorado
+  const deb = debounce(function(){
     renderTable();
   }, state.filterDebounceMs);
 
   el.tableWrap.querySelectorAll('.filter-col').forEach(inp=>{
+    // Módulo 4.14.1.2.1 - Actualización inmediata del estado
     inp.addEventListener('input', (e)=> {
-      // Actualizar inmediatamente el valor en el estado
       const col = decodeURIComponent(inp.dataset.col);
       state.columnFilters[col] = inp.value;
-      // Llamar al debounce para procesamiento posterior
-      deb(inp);
+      deb();
     });
-    // Añadir esta línea para permitir la escritura continua
+    
+    // Módulo 4.14.1.2.2 - Prevenir bloqueo de escritura
     inp.addEventListener('keydown', (e)=> { 
-      // Evitar que se bloquee la entrada
+      e.stopPropagation();
+    });
+    
+    // Módulo 4.14.1.2.3 - Mantener foco durante escritura
+    inp.addEventListener('focus', (e)=> {
       e.stopPropagation();
     });
   });
 
-  // clear buttons inside columns
+  // Módulo 4.14.1.3 - Botones de limpiar filtros por columna
   el.tableWrap.querySelectorAll('.filter-col-clear').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const col = decodeURIComponent(btn.dataset.col);
       state.columnFilters[col] = '';
-      // re-render and focus the input so user can continue typing
       renderTable();
       setTimeout(()=>{
         const selector = `.filter-col[data-col="${encodeURIComponent(col)}"]`;
         const newInp = el.tableWrap.querySelector(selector);
-        if(newInp){ newInp.value=''; newInp.focus(); }
+        if(newInp){ 
+          newInp.value=''; 
+          newInp.focus(); 
+        }
       }, 0);
     });
   });
 
-  // editing handling
+  // Módulo 4.14.1.4 - Manejo de edición
   if(state.editing){
     el.tableWrap.querySelectorAll('tbody td').forEach(td=>{
       td.contentEditable = 'true';
@@ -693,9 +1267,8 @@ function attachTableEvents(filteredRows){
     });
   }
 
-  // virtualization: update on scroll
+  // Módulo 4.14.1.5 - Scroll virtual
   el.tableWrap.onscroll = function(){
-    // recompute virtualStart from scrollTop and re-render
     const scrollTop = el.tableWrap.scrollTop || 0;
     const newStart = Math.max(0, Math.floor(scrollTop / state.rowHeight) - 3);
     if(newStart !== state.virtualStart){
@@ -705,122 +1278,148 @@ function attachTableEvents(filteredRows){
   };
 }
 
-/* Módulo 4.15 - onCellEdit: sincronizar edición con estructura JSON original (4.15.1) */
+/* Módulo 4.15 - Edición de celdas */
+
+/* Módulo 4.15.1 - Manejar edición de celda */
 function onCellEdit(e){
   const td = e.target;
   const virtualRowIdx = Number(td.dataset.row);
   const col = decodeURIComponent(td.dataset.col);
   const newVal = td.innerText;
-  // Determine actual index in currentRows based on virtualStart
+  
+  // Módulo 4.15.1.1 - Actualizar currentRows
   const actualIdx = virtualRowIdx;
-  // Update currentRows
   if(typeof actualIdx === 'number' && state.currentRows[actualIdx]){
     state.currentRows[actualIdx][col] = newVal;
   }
-  // Update originalParsed structure:
-  // Reconstruct nested object from flattened row and replace in originalParsed accordingly.
-  // Determine where to place: if originalParsed.type === 'array' -> map by index
+  
+  // Módulo 4.15.1.2 - Reconstruir JSON completo
   if(state.originalParsed && state.originalParsed.type === 'array'){
-    // unflatten currentRows[actualIdx] to object and place into parsed array
     const newObj = unflattenObject(state.currentRows[actualIdx]);
-    // We cannot mutate state.originalParsed directly because we only stored type; instead we keep originalParsedFull in localStorage when load
-    // Simpler approach: store lastParsedFull in memory when parsing
     if(state.lastParsedFull && Array.isArray(state.lastParsedFull)){
       state.lastParsedFull[actualIdx] = newObj;
-      // persist lastParsedFull to lastJson
-      localStorage.setItem('lastJson', JSON.stringify(state.lastParsedFull, null, 2));
-      el.jsonin.value = JSON.stringify(state.lastParsedFull, null, 2);
+      const jsonStr = JSON.stringify(state.lastParsedFull, null, 2);
+      localStorage.setItem('lastJson', jsonStr);
+      el.jsonin.value = jsonStr;
     }
   } else if(state.originalParsed && state.originalParsed.type === 'rootKeyArray'){
     const key = state.originalParsed.key;
     if(state.lastParsedFull && state.lastParsedFull[key] && Array.isArray(state.lastParsedFull[key])){
       const newObj = unflattenObject(state.currentRows[actualIdx]);
       state.lastParsedFull[key][actualIdx] = newObj;
-      localStorage.setItem('lastJson', JSON.stringify(state.lastParsedFull, null, 2));
-      el.jsonin.value = JSON.stringify(state.lastParsedFull, null, 2);
+      const jsonStr = JSON.stringify(state.lastParsedFull, null, 2);
+      localStorage.setItem('lastJson', jsonStr);
+      el.jsonin.value = jsonStr;
     }
   } else if(state.originalParsed && state.originalParsed.type === 'object'){
-    // single object: update first element
     const newObj = unflattenObject(state.currentRows[actualIdx]);
     state.lastParsedFull = newObj;
-    localStorage.setItem('lastJson', JSON.stringify(state.lastParsedFull, null, 2));
-    el.jsonin.value = JSON.stringify(state.lastParsedFull, null, 2);
+    const jsonStr = JSON.stringify(state.lastParsedFull, null, 2);
+    localStorage.setItem('lastJson', jsonStr);
+    el.jsonin.value = jsonStr;
   }
 }
 
-/* Módulo 4.16 - Clear JSON behavior (4.16.1) */
+/* Módulo 4.16 - Eventos de interfaz */
+
+/* Módulo 4.16.1 - Limpiar JSON */
 el.clearBtn.addEventListener('click', ()=>{
   el.jsonin.value = '';
   state.originalParsed = null;
-  state.originalRows = []; state.currentRows = []; state.currentHeaders = [];
-  el.tableWrap.innerHTML = '<div style="padding:12px;color:var(--muted)">No hay tabla para mostrar</div>';
+  state.originalRows = []; 
+  state.currentRows = []; 
+  state.currentHeaders = [];
+  el.tableWrap.innerHTML = `<div style="padding:12px;color:var(--muted)">${t('noTable')}</div>`;
   updateActionButtons();
   localStorage.removeItem('lastJson');
 });
 
-/* Módulo 4.17 - Copiar con mensaje en la posición del cursor (4.17.1) */
+/* Módulo 4.16.2 - Copiar tabla */
 el.copyBtn.addEventListener('click', async (ev)=>{
   if(!state.currentRows || !state.currentRows.length) return;
   try{
     await navigator.clipboard.writeText(rowsToCsv(state.currentRows, el.separatorSelect.value));
-    const note = document.createElement('div'); note.textContent = 'Copiado';
-    note.style.position = 'fixed'; note.style.zIndex = 99999; note.style.padding = '6px 10px';
-    note.style.background = '#e0f7fa'; note.style.borderRadius = '6px';
+    const note = document.createElement('div'); 
+    note.textContent = t('copied');
+    note.style.position = 'fixed'; 
+    note.style.zIndex = 99999; 
+    note.style.padding = '6px 10px';
+    note.style.background = '#e0f7fa'; 
+    note.style.borderRadius = '6px';
+    
     if(ev && ev.clientX && ev.clientY){
       note.style.left = (ev.clientX + 8) + 'px';
       note.style.top = (ev.clientY + 8) + 'px';
     } else {
-      note.style.left = '50%'; note.style.top = '12px'; note.style.transform = 'translateX(-50%)';
+      note.style.left = '50%'; 
+      note.style.top = '12px'; 
+      note.style.transform = 'translateX(-50%)';
     }
+    
     document.body.appendChild(note);
     setTimeout(()=> note.remove(), 900);
-  }catch(e){ console.warn(e); }
+  }catch(e){ 
+    console.warn(e); 
+  }
 });
 
-/* Módulo 4.18 - Global filter and clear (4.18.1) with debounce */
-const debFilterGlobal = debounce(()=>{ renderTable(); updateActionButtons(); }, state.filterDebounceMs);
+/* Módulo 4.16.3 - Filtro global con debounce */
+const debFilterGlobal = debounce(()=>{ 
+  renderTable(); 
+  updateActionButtons(); 
+}, state.filterDebounceMs);
+
 el.filterGlobal.addEventListener('input', debFilterGlobal);
+
+/* Módulo 4.16.4 - Limpiar filtro global */
 el.filterGlobalClearBtn.addEventListener('click', ()=>{
   el.filterGlobal.value = '';
   el.filterGlobal.focus();
   renderTable();
 });
 
-/* Módulo 4.19 - Edit toggle (4.19.1) */
+/* Módulo 4.16.5 - Toggle de edición */
 el.editBtn.addEventListener('click', ()=>{
   state.editing = !state.editing;
   el.editBtn.classList.toggle('active', state.editing);
-  el.editBtn.textContent = state.editing ? '💾 Guardar' : '✏️ Editar';
+  document.getElementById('editBtnText').textContent = state.editing ? t('save') : t('edit');
   if(!state.editing) saveLastJson();
   renderTable();
 });
 
-/* Módulo 4.20 - Fetch URL (4.20.1) */
+/* Módulo 4.16.6 - Cargar desde URL */
 el.fetchBtn.addEventListener('click', async ()=>{
   if(!el.urlIn.value.trim()) return;
   try{
     el.fetchBtn.disabled = true;
-    el.fetchBtn.textContent = 'Cargando...';
+    el.fetchBtn.textContent = t('loading');
     const res = await fetch(el.urlIn.value.trim());
     const txt = await res.text();
     const parsed = tryParseJson(txt);
     el.jsonin.value = parsed ? JSON.stringify(parsed, null, 2) : txt;
     state.lastParsedFull = parsed;
     await parseJsonInput(true);
-  }catch(e){ console.warn(e); alert('Error cargando URL'); }
-  el.fetchBtn.textContent = 'Cargar URL';
+  }catch(e){ 
+    console.warn(e); 
+    alert(t('errorLoadingUrl')); 
+  }
+  el.fetchBtn.textContent = t('loadUrl');
   updateFetchButtonState();
 });
 
-/* Módulo 4.21 - Download / raw / separator change behavior (4.21.1) */
+/* Módulo 4.16.7 - Descargas y visualización raw */
 el.downloadSelect.addEventListener('change', ()=>{
   const val = el.downloadSelect.value;
   if(!val) return;
   const sep = el.separatorSelect.value;
+  
   if(val === 'csv' || val === 'txt'){
     const content = rowsToCsv(state.currentRows, sep);
     const blob = new Blob([content], {type:'text/plain;charset=utf-8'});
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = dynamicFilename(val); a.click();
+    const a = document.createElement('a'); 
+    a.href = URL.createObjectURL(blob); 
+    a.download = dynamicFilename(val); 
+    a.click();
     setTimeout(()=>URL.revokeObjectURL(a.href), 1500);
   } else if(val === 'xlsx'){
     const ws = XLSX.utils.json_to_sheet(state.currentRows);
@@ -830,16 +1429,25 @@ el.downloadSelect.addEventListener('change', ()=>{
   }
   el.downloadSelect.value = '';
 });
+
+/* Módulo 4.16.8 - Toggle raw display */
 el.toggleRawBtn.addEventListener('click', ()=>{
   if(!state.currentRows || !state.currentRows.length) return;
-  if(el.rawDisplay.style.display === 'block'){ el.rawDisplay.style.display = 'none'; el.tableWrap.style.display = ''; }
-  else {
+  
+  if(el.rawDisplay.style.display === 'block'){ 
+    el.rawDisplay.style.display = 'none'; 
+    el.tableWrap.style.display = '';
+    el.toggleRawBtn.textContent = t('showRaw');
+  } else {
     el.rawDisplay.value = rowsToCsv(state.currentRows, el.separatorSelect.value);
-    el.rawDisplay.style.display = 'block'; el.tableWrap.style.display = 'none';
+    el.rawDisplay.style.display = 'block'; 
+    el.tableWrap.style.display = 'none';
+    el.toggleRawBtn.textContent = t('hideRaw');
     setTimeout(()=>{ el.rawDisplay.select(); }, 20);
   }
 });
-// Módulo 4.21.2 - Cuando cambia el separador y RAW visible, actualizar y seleccionar
+
+/* Módulo 4.16.9 - Actualizar raw al cambiar separador */
 el.separatorSelect.addEventListener('change', ()=>{
   if(el.rawDisplay.style.display === 'block' && state.currentRows && state.currentRows.length){
     el.rawDisplay.value = rowsToCsv(state.currentRows, el.separatorSelect.value);
@@ -847,38 +1455,119 @@ el.separatorSelect.addEventListener('change', ()=>{
   }
 });
 
-/* Módulo 4.22 - Historial: seleccionar con confirmación, renombrar y eliminar (4.22.1) */
-el.jsonHistorySelect.addEventListener('change', ()=>{
-  el.deleteHistoryBtn.disabled = el.jsonHistorySelect.value === '';
+/* Módulo 4.17 - Eventos de configuración */
+
+/* Módulo 4.17.1 - Drawer toggle */
+el.configBtn.addEventListener('click', ()=> {
+  el.drawer.classList.toggle('open');
+  showConfigTab();
 });
-el.jsonHistorySelect.addEventListener('dblclick', ()=>{
+
+/* Módulo 4.17.2 - Pestañas del drawer */
+el.tabConfig.addEventListener('click', showConfigTab);
+el.tabCustom.addEventListener('click', showCustomTab);
+
+/* Módulo 4.17.3 - Temas rápidos */
+el.themeLight.addEventListener('click', ()=> { 
+  localStorage.setItem('theme','light'); 
+  document.body.classList.remove('dark'); 
+});
+
+el.themeDark.addEventListener('click', ()=> { 
+  localStorage.setItem('theme','dark'); 
+  document.body.classList.add('dark'); 
+});
+
+/* Módulo 4.17.4 - Cambio de idioma */
+el.languageSelect.addEventListener('change', ()=>{
+  changeLanguage(el.languageSelect.value);
+});
+
+/* Módulo 4.17.5 - Historial JSON */
+el.jsonHistorySelect.addEventListener('change', ()=>{
+  const hasSelection = el.jsonHistorySelect.value !== '';
+  el.deleteHistoryBtn.disabled = !hasSelection;
+  el.loadHistoryBtn.disabled = !hasSelection;
+});
+
+/* Módulo 4.17.6 - Cargar desde historial */
+el.loadHistoryBtn.addEventListener('click', ()=>{
   const idx = el.jsonHistorySelect.value;
   if(idx === '') return;
   const item = state.history[idx];
   if(!item) return;
-  if(!confirm('¿Cargar este JSON desde el historial?')) return;
+  if(!confirm(t('loadJsonFromHistory'))) return;
+  
   el.jsonin.value = item.data;
   state.lastParsedFull = tryParseJson(item.data);
   parseJsonInput(false);
 });
+
+/* Módulo 4.17.7 - Renombrar historial */
 el.renameHistoryBtn.addEventListener('click', ()=>{
   const idx = el.jsonHistorySelect.value;
-  if(idx === '') return alert('Selecciona un JSON del historial');
-  const newName = prompt('Nuevo nombre:', state.history[idx].name || '');
-  if(newName){ state.history[idx].name = newName; saveHistory(); renderHistoryDropdown(); el.jsonHistorySelect.value = idx; }
-});
-el.deleteHistoryBtn.addEventListener('click', ()=>{
-  const idx = el.jsonHistorySelect.value;
-  if(idx === '') return alert('Selecciona un elemento para eliminar');
-  if(confirm('Eliminar este JSON del historial?')){
-    state.history.splice(idx, 1);
-    saveHistory(); renderHistoryDropdown();
-    el.jsonHistorySelect.value = '';
-    el.deleteHistoryBtn.disabled = true;
+  if(idx === '') return alert(t('selectJsonFromHistory'));
+  const newName = prompt(t('newName'), state.history[idx].name || '');
+  if(newName){ 
+    state.history[idx].name = newName; 
+    saveHistory(); 
+    renderHistoryDropdown(); 
+    el.jsonHistorySelect.value = idx; 
   }
 });
 
-/* Módulo 4.23 - Click fuera del drawer cierra (4.23.1) */
+/* Módulo 4.17.8 - Eliminar del historial */
+el.deleteHistoryBtn.addEventListener('click', ()=>{
+  const idx = el.jsonHistorySelect.value;
+  if(idx === '') return alert(t('selectItemToDelete'));
+  if(confirm(t('deleteFromHistory'))){
+    state.history.splice(idx, 1);
+    saveHistory(); 
+    renderHistoryDropdown();
+    el.jsonHistorySelect.value = '';
+    el.deleteHistoryBtn.disabled = true;
+    el.loadHistoryBtn.disabled = true;
+  }
+});
+
+/* Módulo 4.17.9 - Modo móvil */
+el.mobileSwitchBtn.addEventListener('click', ()=>{
+  enableMobileMode(!state.mobileMode);
+});
+
+/* Módulo 4.18 - Tema personalizado eventos */
+
+/* Módulo 4.18.1 - Inputs de color y fuente */
+['bgColor','textColor','fontFamily','cellEven','cellOdd'].forEach(id=>{
+  const node = el[id] || document.getElementById(id);
+  if(node){
+    node.addEventListener('input', ()=>{
+      saveCustomTheme();
+    });
+  }
+});
+
+/* Módulo 4.18.2 - Restablecer tema */
+el.customDefaultBtn.addEventListener('click', ()=>{
+  if(!confirm(t('resetThemeConfirm'))) return;
+  localStorage.removeItem('customTheme');
+  el.bgColor.value = '#ffffff';
+  el.textColor.value = '#111111';
+  el.fontFamily.value = '';
+  el.cellEven.value = '#f9f9f9';
+  el.cellOdd.value = '#eef3ff';
+  applyCustomTheme({
+    bg:'#ffffff', 
+    text:'#111111', 
+    font:'', 
+    cellEven:'#f9f9f9', 
+    cellOdd:'#eef3ff'
+  });
+});
+
+/* Módulo 4.19 - Eventos globales */
+
+/* Módulo 4.19.1 - Cerrar drawer al hacer click fuera */
 document.addEventListener('mousedown', (e)=>{
   if(el.drawer.classList.contains('open')){
     if(!el.drawer.contains(e.target) && !el.configBtn.contains(e.target)){
@@ -888,83 +1577,73 @@ document.addEventListener('mousedown', (e)=>{
   }
 });
 
-/* Módulo 4.24 - Carga inicial (4.24.1 tema, historial, último JSON, botones) */
-(async function init(){
-  try{
-    // 4.24.2 - tema claro/oscuro
-    const savedTheme = localStorage.getItem('theme');
-    if(savedTheme === 'dark') document.body.classList.add('dark');
-    else document.body.classList.remove('dark');
-    el.themeLight.addEventListener('click', ()=> { localStorage.setItem('theme','light'); document.body.classList.remove('dark'); });
-    el.themeDark.addEventListener('click', ()=> { localStorage.setItem('theme','dark'); document.body.classList.add('dark'); });
+/* Módulo 4.19.2 - Actualizar estado de fetch button */
+el.urlIn.addEventListener('input', updateFetchButtonState);
 
-    // 4.24.3 - load custom theme
-    loadCustomTheme();
-
-    // 4.24.4 - history
-    loadHistory();
-
-    // 4.24.5 - last JSON
-    const last = localStorage.getItem('lastJson');
-    if(last && last.trim()){ el.jsonin.value = last; state.lastParsedFull = tryParseJson(last); await parseJsonInput(false); }
-    else { updateActionButtons(); }
-
-    // 4.24.6 - fetch button initial state
-    updateFetchButtonState();
-
-    // 4.24.7 - mobile mode
-    const mobile = localStorage.getItem('mobileMode') === 'true';
-    enableMobileMode(mobile);
-
-    // 4.24.8 - ensure loading hidden
-    if(el.loadingAnim) el.loadingAnim.style.display = 'none';
-  }catch(e){ console.warn('init', e); }
-})();
-
-/* Módulo 4.25 - Helpers de escape */
-function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]); }
-function escapeAttribute(s){ return (s||'').replace(/"/g,'&quot;'); }
-
-/* Módulo 4.26 - Ensure clear button state updates on manual input (4.26.1) */
+/* Módulo 4.19.3 - Actualizar botones al cambiar JSON */
 el.jsonin.addEventListener('input', ()=>{
-  // enable clear button when any text
   updateActionButtons();
 });
 
-/* Módulo 4.27 - Debounce for column filters behaviour handled in attachTableEvents */
-
-/* Módulo 4.28 - Save reconstructed JSON for export (4.28.1) */
-/* Reconstruye JSON completo desde state.currentRows y state.originalParsed */
-function reconstructJsonFull(){
-  if(!state.currentRows || !state.currentRows.length) return null;
-  if(state.originalParsed && state.originalParsed.type === 'array'){
-    // unflatten each row into object
-    const arr = state.currentRows.map(r => unflattenObject(r));
-    return arr;
-  } else if(state.originalParsed && state.originalParsed.type === 'rootKeyArray'){
-    const key = state.originalParsed.key;
-    const full = JSON.parse(JSON.stringify(state.lastParsedFull || {}));
-    full[key] = state.currentRows.map(r => unflattenObject(r));
-    return full;
-  } else if(state.originalParsed && state.originalParsed.type === 'object'){
-    // single object
-    return unflattenObject(state.currentRows[0]);
-  }
-  return null;
-}
-
-/* Módulo 4.29 - Update raw when separator changes and RAW visible handled above */
-
-/* Módulo 4.30 - Virtual scrolling: compute visibleCount on resize */
+/* Módulo 4.19.4 - Redimensionar ventana */
 window.addEventListener('resize', ()=>{
   computeVisibleCount();
   renderTable();
 });
 
-/* Módulo 4.31 - End of script */
+/* Módulo 4.20 - Inicialización */
+
+/* Módulo 4.20.1 - Función de inicialización principal */
+(async function init(){
+  try{
+    // Módulo 4.20.1.1 - Cargar idioma guardado
+    const savedLang = localStorage.getItem('language') || 'es';
+    state.currentLanguage = savedLang;
+    el.languageSelect.value = savedLang;
+    
+    // Módulo 4.20.1.2 - Cargar tema claro/oscuro
+    const savedTheme = localStorage.getItem('theme');
+    if(savedTheme === 'dark') {
+      document.body.classList.add('dark');
+    } else {
+      document.body.classList.remove('dark');
+    }
+
+    // Módulo 4.20.1.3 - Cargar tema personalizado
+    loadCustomTheme();
+
+    // Módulo 4.20.1.4 - Cargar historial
+    loadHistory();
+
+    // Módulo 4.20.1.5 - Cargar último JSON
+    const last = localStorage.getItem('lastJson');
+    if(last && last.trim()){ 
+      el.jsonin.value = last; 
+      state.lastParsedFull = tryParseJson(last); 
+      await parseJsonInput(false); 
+    } else { 
+      updateActionButtons(); 
+    }
+
+    // Módulo 4.20.1.6 - Estado inicial de botones
+    updateFetchButtonState();
+
+    // Módulo 4.20.1.7 - Modo móvil
+    const mobile = localStorage.getItem('mobileMode') === 'true';
+    enableMobileMode(mobile);
+
+    // Módulo 4.20.1.8 - Actualizar textos de interfaz
+    updateUITexts();
+    
+  }catch(e){ 
+    console.warn('init', e); 
+  }
+})();
+
+/* Módulo 4.21 - Fin del script */
 </script>
 
-<!-- XLSX for download support (Módulo 5.1) -->
+<!-- Módulo 5.1 - Biblioteca XLSX para exportación -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </body>
 </html>
