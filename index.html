@@ -1,38 +1,633 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" dir="ltr">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>.JSON → Tabla Mejorada</title>
+<!-- Las cabeceras de seguridad deben configurarse en el servidor -->
+<title data-i18n="appTitle">JSON → Tabla Mejorada</title>
 
-<link href="https://fonts.googleapis.com/css?family=Inter:400,700&display=swap" rel="stylesheet">
+<!--
+  Versión v1.2.54 | Última actualización: 2025-10-04
+  Cambios:
+    - Incrustados scripts de seguridad e i18n directamente en el HTML (eliminando dependencias externas)
+    - Corrección final del control de tamaño de fuente (mapa de elementos, CSS en body y sincronización HTML/Body)
+    - Corrección del control de tamaño de fuente (persistencia real y actualización inmediata con CSS variable)
+    - Añadido control de tamaño de fuente en panel personalizado (con persistencia y CSS variable)
+    - Formateo regional de números al renderizar tabla (Intl.NumberFormat según idioma)
+    - Agregadas traducciones completas para español e inglés (sort, history, confirmaciones, placeholders)
+    - Agregado debug adicional para filtro global y renderizado de tabla
+    - Corregido alto de tabla para mejorar scroll en pantallas pequeñas (height: calc(100vh - 200px) con max-height: 80vh)
+    - Modificado mensaje flotante para que aparezca donde está el mouse al copiar tabla
+    - Mejorados estilos CSS para efecto blink en filtro global (fondo amarillo más intenso)
+    - Agregado debug para verificar coincidencias en filtro global
+    - Agregado mensaje flotante centrado al copiar tabla
+    - Mejorada notificación de copiado con fallback a alerta si announce falla
+    - Corregido error 'Cannot set properties of null' en editBtnText agregando el elemento a 'el'
+    - Agregada clave 'tableCopied' para mostrar mensaje de confirmación al copiar tabla
+    - Corregido error 'saveHistory is not defined' agregando la función faltante
+    - Eliminadas recargas automáticas de página en errores de procesamiento JSON
+    - Corregido botón copiar tabla (agregado evento de copiado al portapapeles)
+    - Agregada persistencia de filtros de columna al recargar página
+    - Mejoras en resaltado de búsqueda global (estilos ya presentes)
+    - Asegurada la persistencia del idioma tras recargar (sincronización inicial de estado)
+    - Corregida persistencia del idioma seleccionado (unificación de claves localStorage)
+    - Sincronizada inicialización de idioma entre i18nConfig y estado global
+    - Ajustada recomendación de cabeceras CSP y dominios permitidos
+    - Mejoras de accesibilidad en formularios (etiquetas asociadas)
+    - Corregido error de sintaxis en inicialización de seguridad
+    - Remover meta CSP inline, limpiar marcador accidental y añadir etiqueta oculta para `downloadSelect`
+    - Corregida inconsistencia en tipografía predeterminada (agregado system-ui para consistencia entre carga inicial y reset)
+    - Cambiada tipografía predeterminada a Segoe UI para modo claro y oscuro
+    - Cambiada animación de blink de filtros a 1 segundo (no permanente)
+    - Corregido resaltado de filtros para que parpadee una vez y desaparezca
+    - Corregido el efecto blink de filtros para que se aplique después del renderizado y se limpie correctamente
+    - Suavizada la animación de blink de filtros a 0.5s y eliminados colores fijos para transición más natural
+    - Corregido el selector para filtro global para que funcione correctamente con filas virtuales
+    - Agregado atributo data-row a las filas de tabla para permitir selección precisa en filtros globales
+    - Modificadas animaciones @keyframes filterBlink y filterBlinkOdd para que parpadeen una vez y desaparezcan con opacidad 0
+    - Unificado color de resaltado de filtros a un tono suave consistente (rgba(255, 235, 59, 0.3)), eliminando variaciones por fila y mejorando el efecto visual
+    - v1.2.32: Nueva animación `smoothBlink` con restauración precisa del color original y reuso de `blinkCell()` para filtros globales y por columna
+-->
+<link rel="dns-prefetch" href="https://fonts.gstatic.com">
+
+<!-- Cargar utilidades de seguridad e internacionalización -->
+<script>
+/**
+ * Utilidades de Seguridad
+ * Versión v1.0.1
+ * Cambios:
+ *   - Mejora del formateo de directivas CSP y aviso de cabeceras seguras
+ */
+
+const Security = (() => {
+  // Lista blanca de dominios permitidos para fetch
+  const ALLOWED_DOMAINS = [
+    'api.example.com',
+    'data.example.org'
+  ];
+  
+  // Configuración de CSP
+  const CSP_CONFIG = {
+    defaultSrc: ["'self'"],
+    scriptSrc: [
+      "'self'", 
+      "'unsafe-inline'", 
+      "'unsafe-eval'"
+    ],
+    styleSrc: [
+      "'self'", 
+      "'unsafe-inline'",
+      "fonts.googleapis.com"
+    ],
+    imgSrc: [
+      "'self'", 
+      "data:", 
+      "https:"
+    ],
+    fontSrc: [
+      "'self'", 
+      "fonts.gstatic.com"
+    ],
+    connectSrc: [
+      "'self'",
+      ...ALLOWED_DOMAINS
+    ],
+    frameAncestors: ["'none'"],
+    formAction: ["'self'"],
+    baseUri: ["'self'"],
+    objectSrc: ["'none'"],
+    upgradeInsecureRequests: true
+  };
+
+  /**
+   * Obtiene la configuración de CSP como una cadena de encabezado
+   * @param {boolean} reportOnly - Si es true, devuelve la directiva en modo report-only
+   * @returns {string} La directiva CSP formateada para usar en un encabezado HTTP
+   */
+  function toDirectiveName(key) {
+    return key.replace(/[A-Z]/g, match => `-${match.toLowerCase()}`);
+  }
+
+  function getCSPHeader(reportOnly = false) {
+    const cspDirectives = [];
+
+    Object.entries(CSP_CONFIG).forEach(([directive, value]) => {
+      const directiveName = toDirectiveName(directive);
+
+      if (Array.isArray(value) && value.length > 0) {
+        cspDirectives.push(`${directiveName} ${value.join(' ')}`);
+      } else if (value === true) {
+        cspDirectives.push(directiveName);
+      } else if (typeof value === 'string' && value.trim() !== '') {
+        cspDirectives.push(`${directiveName} ${value}`);
+      }
+    });
+
+    if (reportOnly && CSP_CONFIG.reportUri) {
+      cspDirectives.push(`report-uri ${CSP_CONFIG.reportUri}`);
+    }
+
+    return cspDirectives.join('; ');
+  }
+  
+  /**
+   * @deprecated No se recomienda usar CSP a través de meta tags
+   * Esta función solo está para compatibilidad con versiones anteriores
+   */
+  function applyCSP() {
+    console.warn('applyCSP() está obsoleto. Configura CSP a través de encabezados HTTP en el servidor.');
+    console.warn('Usa getCSPHeader() para obtener la configuración de CSP para el servidor.');
+    console.log('Configuración CSP recomendada para el servidor:');
+    console.log('Content-Security-Policy:', getCSPHeader(false));
+    console.log('Content-Security-Policy-Report-Only:', getCSPHeader(true));
+    return getCSPHeader();
+  }
+
+  /**
+   * Sanitiza una cadena HTML para prevenir XSS
+   * @param {string} str - Cadena a sanitizar
+   * @returns {string} Cadena segura
+   */
+  function sanitizeHTML(str) {
+    if (!str) return '';
+    
+    // Convertir a string por si es un número u otro tipo
+    const text = String(str);
+    
+    // Reemplazar caracteres especiales con entidades HTML
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#x27;')
+      .replace(/\//g, '&#x2F;');
+  }
+
+  /**
+   * Valida si una URL es segura para fetch
+   * @param {string} url - URL a validar
+   * @returns {boolean} true si es segura, false en caso contrario
+   */
+  function isSafeUrl(url) {
+    if (!url) return false;
+    
+    try {
+      const parsedUrl = new URL(url, window.location.origin);
+      
+      // Solo permitir HTTP/HTTPS
+      if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+        return false;
+      }
+      
+      // Verificar contra la lista blanca de dominios
+      const isAllowed = ALLOWED_DOMAINS.some(domain => 
+        parsedUrl.hostname === domain || 
+        parsedUrl.hostname.endsWith(`.${domain}`)
+      );
+      
+      return isAllowed;
+    } catch (e) {
+      console.error('Error al validar URL:', e);
+      return false;
+    }
+  }
+
+  /**
+   * Versión segura de fetch que valida la URL
+   * @param {string} url - URL a la que hacer la petición
+   * @param {Object} options - Opciones de fetch
+   * @returns {Promise<Response>} Respuesta de la petición
+   */
+  function safeFetch(url, options = {}) {
+    if (!isSafeUrl(url)) {
+      return Promise.reject(new Error('URL no permitida por razones de seguridad'));
+    }
+    
+    // Configuración por defecto segura
+    const defaultOptions = {
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      ...options
+    };
+    
+    return fetch(url, defaultOptions);
+  }
+
+  /**
+   * Escapa una cadena para uso en expresiones regulares
+   * @param {string} str - Cadena a escapar
+   * @returns {string} Cadena escapada
+   */
+  function escapeRegExp(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  /**
+   * Valida una dirección de correo electrónico
+   * @param {string} email - Correo a validar
+   * @returns {boolean} true si es válido, false en caso contrario
+   */
+  function isValidEmail(email) {
+    if (!email) return false;
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(String(email).toLowerCase());
+  }
+
+  if (typeof document !== 'undefined') {
+    // Mostrar advertencia sobre CSP en consola
+    console.warn('La configuración de CSP debe realizarse a través de encabezados HTTP en el servidor.');
+    console.log('Configuración CSP recomendada para el servidor:');
+    console.log('Content-Security-Policy:', getCSPHeader(false));
+    console.warn('Configura X-Frame-Options mediante encabezados HTTP en el servidor (p.ej. "DENY" o "SAMEORIGIN").');
+  }
+
+  // API pública
+  return {
+    getCSPHeader,
+    applyCSP, // Obsoleto, mantener por compatibilidad
+    sanitizeHTML,
+    isSafeUrl,
+    safeFetch,
+    escapeRegExp,
+    isValidEmail,
+    ALLOWED_DOMAINS,
+    CSP_CONFIG // Exportar configuración para uso en el servidor
+  };
+})();
+
+// Exportar para módulos
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
+  module.exports = Security;
+} else {
+  window.Security = Security;
+}
+</script>
+
+<script>
+/**
+ * Sistema de Internacionalización (i18n)
+ * Versión 1.0.0
+ */
+
+const i18n = (() => {
+  // Idiomas soportados
+  const supportedLanguages = ['es', 'en'];
+  
+  // Idioma por defecto
+  let currentLanguage = 'es';
+  
+  // Traducciones
+  const translations = {
+    es: {
+      // Interfaz general
+      appTitle: 'JSON → Tabla Mejorada',
+      closeButton: 'Cerrar',
+      saveButton: 'Guardar',
+      cancelButton: 'Cancelar',
+      loading: 'Cargando...',
+      
+      // Mensajes de error
+      error: 'Error',
+      invalidJson: 'JSON no válido',
+      fetchError: 'Error al cargar los datos',
+      
+      // Configuración
+      settings: 'Configuración',
+      theme: 'Tema',
+      language: 'Idioma',
+      darkMode: 'Modo oscuro',
+      lightMode: 'Modo claro',
+      
+      // Botones
+      download: 'Descargar',
+      clear: 'Limpiar',
+      apply: 'Aplicar',
+      edit: '✏️',
+      delete: 'Eliminar',
+      
+      // Filtros
+      filter: 'Filtrar',
+      clearFilters: 'Limpiar filtros',
+      
+      // Tabla
+      noData: 'No hay datos para mostrar',
+      rowsPerPage: 'Filas por página',
+      of: 'de',
+      
+      // Validación
+      requiredField: 'Este campo es obligatorio',
+      invalidUrl: 'URL no válida',
+      
+      // Títulos de secciones
+      jsonInput: 'Entrada JSON',
+      tablePreview: 'Vista previa de la tabla',
+      configuration: 'Configuración',
+      saveTheme: 'Guardar tema',
+      themeSaved: 'Tema guardado correctamente',
+      themePresets: 'Temas guardados',
+      themePresetPlaceholder: '-- Seleccionar tema --',
+      themePresetMeta: '{{count}} temas guardados',
+      loadThemePreset: 'Cargar tema',
+      renameThemePreset: 'Renombrar tema',
+      deleteThemePreset: 'Eliminar tema',
+      themePresetsLabel: 'Temas guardados',
+      loadThemePresetLabel: 'Cargar tema',
+      renameThemePresetLabel: 'Renombrar tema',
+      deleteThemePresetLabel: 'Eliminar tema',
+      themeLoaded: 'Tema cargado',
+      themeDeleted: 'Tema eliminado',
+      themeRenamed: 'Tema renombrado',
+      saveThemePrompt: 'Nombre para el tema',
+      renameThemePrompt: 'Nuevo nombre para el tema',
+      confirmDeleteTheme: '¿Eliminar este tema guardado?',
+      themePresetDuplicate: 'Ya existe un tema con estas opciones',
+      selectThemePreset: 'Seleccione un tema guardado',
+      noThemePresets: 'No hay temas guardados',
+      
+      // Textos adicionales (UI principal)
+      loadUrl: 'Cargar URL',
+      urlControls: 'Controles de URL',
+      urlPlaceholder: 'Pega URL aquí...',
+      clearUrl: 'Limpiar URL',
+      jsonPlaceholder: 'Pega o escribe JSON aquí',
+      clearJson: 'Limpiar JSON',
+      separator: 'Separador:',
+      downloadOption: 'Descargar...',
+      download: 'Descargar',
+      toggleRaw: 'Mostrar/ocultar JSON raw',
+      copyTable: 'Copiar tabla',
+      globalFilter: 'Filtrar...',
+      clearFilter: 'Limpiar filtro',
+      toggleEdit: 'Habilitar/deshabilitar edición',
+      editModeActive: 'Modo edición activo',
+      rawCsv: 'CSV en crudo',
+      closeConfiguration: 'Cerrar configuración',
+      customTheme: 'Tema personalizado',
+      language: 'Idioma',
+      languageEnglishDefault: 'Inglés (predeterminado)',
+      languageSpanish: 'Español',
+      jsonHistory: 'Historial JSON',
+      selectJsonOption: '-- Seleccionar JSON --',
+      historySearchPlaceholder: 'Buscar en historial...',
+      load: 'Cargar',
+      rename: 'Renombrar',
+      delete: 'Eliminar',
+      default: 'Predeterminado',
+      background: 'Fondo',
+      text: 'Texto',
+      headerCells: 'Encabezados',
+      typography: 'Tipografía',
+      evenCells: 'Filas pares',
+      oddCells: 'Filas impares',
+      fontSize: 'Tamaño de fuente',
+      webMobile: 'Vista móvil',
+      tableCopied: 'Tabla copiada al portapapeles',
+      noResults: 'No se encontraron resultados'
+    },
+    en: {
+      // General Interface
+      appTitle: 'JSON → Enhanced Table',
+      closeButton: 'Close',
+      saveButton: 'Save',
+      cancelButton: 'Cancel',
+      loading: 'Loading...',
+      
+      // Error messages
+      error: 'Error',
+      invalidJson: 'Invalid JSON',
+      fetchError: 'Error loading data',
+      
+      // Configuration
+      settings: 'Settings',
+      theme: 'Theme',
+      language: 'Language',
+      darkMode: 'Dark Mode',
+      lightMode: 'Light Mode',
+      
+      // Buttons
+      download: 'Download',
+      clear: 'Clear',
+      apply: 'Apply',
+      edit: '✏️',
+      delete: 'Delete',
+      
+      // Filters
+      filter: 'Filter',
+      clearFilters: 'Clear filters',
+      
+      // Table
+      noData: 'No data available',
+      rowsPerPage: 'Rows per page',
+      of: 'of',
+      
+      // Validation
+      requiredField: 'This field is required',
+      invalidUrl: 'Invalid URL',
+      
+      // Section titles
+      jsonInput: 'JSON Input',
+      tablePreview: 'Table Preview',
+      configuration: 'Configuration',
+      saveTheme: 'Save theme',
+      themeSaved: 'Theme saved successfully',
+      themePresets: 'Saved themes',
+      themePresetPlaceholder: '-- Select theme --',
+      themePresetMeta: '{{count}} saved themes',
+      loadThemePreset: 'Load theme',
+      renameThemePreset: 'Rename theme',
+      deleteThemePreset: 'Delete theme',
+      themePresetsLabel: 'Saved themes',
+      loadThemePresetLabel: 'Load theme',
+      renameThemePresetLabel: 'Rename theme',
+      deleteThemePresetLabel: 'Delete theme',
+      themeLoaded: 'Theme loaded',
+      themeDeleted: 'Theme deleted',
+      themeRenamed: 'Theme renamed',
+      saveThemePrompt: 'Name for the theme',
+      renameThemePrompt: 'New name for the theme',
+      confirmDeleteTheme: 'Delete this saved theme?',
+      themePresetDuplicate: 'A theme with these settings already exists',
+      selectThemePreset: 'Select a saved theme',
+      noThemePresets: 'No saved themes',
+      
+      // Additional UI text
+      loadUrl: 'Load URL',
+      urlControls: 'URL controls',
+      urlPlaceholder: 'Paste URL here...',
+      clearUrl: 'Clear URL',
+      jsonPlaceholder: 'Paste or type JSON here',
+      clearJson: 'Clear JSON',
+      separator: 'Separator:',
+      downloadOption: 'Download...',
+      download: 'Download',
+      toggleRaw: 'Show/Hide raw JSON',
+      copyTable: 'Copy table',
+      globalFilter: 'Filter...',
+      clearFilter: 'Clear filter',
+      toggleEdit: 'Enable/disable editing',
+      editModeActive: 'Edit mode active',
+      rawCsv: 'Raw CSV',
+      closeConfiguration: 'Close configuration',
+      customTheme: 'Custom Theme',
+      languageEnglishDefault: 'English (default)',
+      languageSpanish: 'Spanish',
+      jsonHistory: 'JSON History',
+      selectJsonOption: '-- Select JSON --',
+      historySearchPlaceholder: 'Search history...',
+      load: 'Load',
+      rename: 'Rename',
+      delete: 'Delete',
+      default: 'Default',
+      background: 'Background',
+      text: 'Text',
+      headerCells: 'Headers',
+      typography: 'Typography',
+      evenCells: 'Even rows',
+      oddCells: 'Odd rows',
+      fontSize: 'Font size',
+      webMobile: 'Mobile view',
+      tableCopied: 'Table copied to clipboard',
+      noResults: 'No results found'
+    }
+  };
+
+  /**
+   * Establece el idioma actual
+   * @param {string} lang - Código de idioma (ej: 'es', 'en')
+   */
+  function setLanguage(lang) {
+    if (translations[lang]) {
+      currentLanguage = lang;
+      document.documentElement.lang = lang;
+      
+      // Aplicar dirección de texto según el idioma
+      document.documentElement.dir = lang === 'ar' || lang === 'he' ? 'rtl' : 'ltr';
+      
+      // Guardar preferencia
+      localStorage.setItem('preferredLanguage', lang);
+      
+      // Disparar evento personalizado
+      window.dispatchEvent(new CustomEvent('languageChanged', { detail: lang }));
+      
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Obtiene la traducción para una clave dada
+   * @param {string} key - Clave de traducción
+   * @param {Object} params - Parámetros para reemplazar en la cadena
+   * @returns {string} Texto traducido
+   */
+  function t(key, params = {}) {
+    let text = translations[currentLanguage]?.[key] || 
+               translations['en'][key] || 
+               key;
+    
+    // Reemplazar parámetros
+    Object.keys(params).forEach(param => {
+      text = text.replace(new RegExp(`{{${param}}}`, 'g'), params[param]);
+    });
+    
+    return text;
+  }
+
+  /**
+   * Obtiene el idioma actual
+   * @returns {string} Código de idioma actual
+   */
+  function getCurrentLanguage() {
+    return currentLanguage;
+  }
+
+  /**
+   * Obtiene la lista de idiomas soportados
+   * @returns {string[]} Lista de códigos de idioma
+   */
+  function getSupportedLanguages() {
+    return [...supportedLanguages];
+  }
+
+  /**
+   * Inicializa el sistema de internacionalización
+   */
+  function init() {
+    // Detectar idioma preferido del navegador
+    const browserLang = (navigator.language || navigator.userLanguage || 'en').split('-')[0];
+    
+    // Intentar cargar idioma guardado o detectar del navegador
+    const savedLang = localStorage.getItem('preferredLanguage');
+    const langToUse = savedLang || (translations[browserLang] ? browserLang : 'en');
+    
+    setLanguage(langToUse);
+    
+    // Escuchar cambios en las preferencias de idioma del sistema
+    window.addEventListener('languagechange', () => {
+      const newLang = (navigator.language || 'en').split('-')[0];
+      if (translations[newLang] && !localStorage.getItem('preferredLanguage')) {
+        setLanguage(newLang);
+      }
+    });
+  }
+
+  // Inicializar al cargar
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+  // API pública
+  return {
+    t,
+    setLanguage,
+    getCurrentLanguage,
+    getSupportedLanguages,
+    on: (event, callback) => window.addEventListener(event, (e) => callback(e.detail))
+  };
+})();
+
+// Exportar para módulos
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
+  module.exports = i18n;
+} else {
+  window.i18n = i18n;
+}
+</script>
 
 <style>
 :root{
-  --bg:#ffffff; 
-  --fg:#111111; 
-  --header-bg:#f2f2f2; 
-  --muted:#888;
-  --cell-even:#f9f9f9; 
-  --cell-odd:#eef3ff; 
-  --accent:#2979ff;
-  --input-border:#bbb; 
+  --bg:#f7f9fc;
+  --fg:#1c1c1e;
+  --header-bg:#f2f2f2;
+  --muted:#6b7280;
   --input-bg:#ffffff;
-  --button-bg:#f2f6ff;
-  --button-border:#bbb;
-  --error:#e53935;
+  --input-border:#d1d5db;
+  --accent:#2979ff;
+  --accent-soft:rgba(41,121,255,0.1);
+  --button-bg:#ebf1ff;
+  --button-border:#c3d4ff;
+  --cell-even:#ffffff;
+  --cell-odd:#f4f7ff;
+  --error:#ff6b6b;
+  --th-bg:#eef2ff;
   --th-height:40px;
-  --row-height:32px;
-  --font-main: 'Inter', system-ui, Arial, sans-serif;
+  --row-height:28px;
+  --font-main:'Segoe UI', Tahoma, sans-serif;
+  --custom-font-size:12px;
 }
 
 body.dark{
-  --bg:#141414; 
-  --fg:#eee; 
-  --header-bg:#222; 
+  --bg:#141414;
+  --fg:#EEEEEE;
+  --header-bg:#222222;
   --muted:#aaa;
-  --cell-even:#252525; 
-  --cell-odd:#202020; 
+  --cell-even:#252525;
+  --cell-odd:#202020;
   --accent:#2979ff;
   --input-border:#555;
   --input-bg:#2a2a2a;
@@ -44,6 +639,7 @@ body.dark{
 body{
   margin:0; 
   font-family:var(--font-main); 
+  font-size:var(--custom-font-size, 14px);
   color:var(--fg);
   background:var(--bg); 
   -webkit-font-smoothing:antialiased;
@@ -63,10 +659,44 @@ body{
   white-space:nowrap;
   border:0;
 }
-.url-control-group{display:flex;gap:8px;flex:1;max-width:500px;}
-.url-input-wrapper{position:relative;flex:0 0 300px;max-width:300px;}
-#urlIn{width:100%;padding-right:30px;box-sizing:border-box;}
+.url-control-group{
+  display:flex;
+  gap:8px;
+  flex:0 1 420px;
+  max-width:100%;
+  align-items:center;
+}
+.url-input-wrapper{
+  position:relative;
+  flex:1 1 auto;
+  max-width:420px;
+  min-width:180px;
+}
+#urlIn{
+  width:100%;
+  padding-right:30px;
+  box-sizing:border-box;
+  min-width:0;
+}
 #urlClearBtn{position:absolute;right:8px;top:50%;transform:translateY(-50%);display:none;z-index:10;background:transparent;border:none;cursor:pointer;padding:0 4px;line-height:1;}
+
+@media (max-width: 900px) {
+  .url-control-group{
+    flex:0 1 360px;
+  }
+  .url-input-wrapper{
+    max-width:360px;
+  }
+}
+
+@media (max-width: 600px) {
+  .url-control-group{
+    flex:0 1 300px;
+  }
+  .url-input-wrapper{
+    max-width:300px;
+  }
+}
 .filter-edit-row{align-items:center;margin-top:10px;gap:8px;}
 .filter-global-wrapper{position:relative;width:300px;max-width:100%;}
 .table-message{
@@ -100,33 +730,33 @@ body{
 
 .history-meta{
   font-size:12px;
-  color:var(--muted);
   margin-top:4px;
 }
 
 input[type=text], textarea, select, button{
   font-family:var(--font-main);
-  font-size:14px;
+  font-size:inherit;
 }
 
 textarea#jsonin{
-  width:100%; 
-  min-height:100px; 
-  padding:10px; 
-  border:2px solid var(--input-border);
-  border-radius:6px; 
-  resize:vertical; 
-  background:var(--input-bg); 
+  width:100%;
+  min-height:120px;
+  padding:10px 14px;
+  border:1px solid var(--input-border);
+  border-radius:6px;
+  background:var(--input-bg);
   color:var(--fg);
-  font-size: 16px; /* Tamaño base */
-  line-height: 1.4;
+  font-size:var(--custom-font-size, 12px);
+  line-height:1.4;
+  resize:vertical;
+  box-shadow:0 2px 6px rgba(15, 15, 15, 0.05);
+  transition:border-color .2s ease, box-shadow .2s ease;
 }
 
-/* Ajustes para pantallas medianas */
 @media (max-width: 768px) {
   textarea#jsonin {
-    font-size: 14px;
-    min-height: 100px;
+    font-size: calc(var(--custom-font-size, 12px) - 1px);
+    min-height: 90px;
     line-height: 1.3;
   }
 }
@@ -134,12 +764,13 @@ textarea#jsonin{
 /* Ajustes para pantallas pequeñas */
 @media (max-width: 480px) {
   textarea#jsonin {
-    font-size: 13px;
-    min-height: 80px;
+    font-size: calc(var(--custom-font-size, 12px) - 2px);
+    min-height: 70px;
     line-height: 1.2;
     padding: 8px;
   }
 }
+
 textarea#jsonin.error{ 
   border-color:var(--error); 
   box-shadow:0 0 6px rgba(229,57,53,0.18); 
@@ -182,54 +813,108 @@ body.dark button:disabled{
 }
 
 #drawer{
-  position:fixed; 
-  right:-100%; 
-  top:0; 
-  width:360px; 
-  height:100vh; 
-  background:var(--header-bg);
-  box-shadow:0 6px 24px rgba(0,0,0,0.12); 
-  transition:right .28s; 
-  z-index:9999; 
-  padding:12px; 
+  position:fixed;
+  top:0;
+  width:360px;
+  height:100vh;
+  background:var(--bg);
+  box-shadow:0 6px 24px rgba(0,0,0,0.12);
+  transition:right .28s ease, opacity .28s ease;
+  z-index:9999;
+  padding:12px;
   overflow:auto;
+  right:-380px;
+  opacity:0;
+  pointer-events:none;
+  font-size:14px;
 }
-#drawer.open{ right:0; }
+#drawer.open{
+  right:0;
+  opacity:1;
+  pointer-events:auto;
+}
+
+.drawer-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.35);
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .25s ease;
+  z-index:9998;
+}
+
+.drawer-overlay.visible{
+  opacity:1;
+  pointer-events:auto;
+}
+
+body.drawer-open{
+  overflow:hidden;
+}
 
 .tab-bar{display:flex;gap:6px;margin-bottom:12px}
 .tab-btn{
   flex:1;
   padding:10px;
   border-radius:8px;
-  border:0;
-  background:var(--input-bg);
+  border:2px solid transparent;
+  background:var(--button-bg);
   color:var(--fg);
   cursor:pointer;
+  transition: all 0.2s ease;
+  outline: none;
 }
+
+.tab-btn:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(41, 121, 255, 0.2);
+}
+
+.tab-btn:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(41, 121, 255, 0.4);
+}
+
 .tab-btn.active{
   background:var(--accent);
   color:#fff;
+  border-color: var(--accent);
+}
+
+.tab-btn.active:after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  height: 3px;
+  background: #fff;
+  border-radius: 3px 3px 0 0;
 }
 
 #tableWrap{ 
   width:100%; 
   margin-top:10px; 
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
   border-radius:8px; 
   border:1px solid var(--input-border); 
   background:transparent; 
   min-height:200px; 
-  max-height:420px; 
+  height: calc(100vh - 200px); /* Ocupar el espacio disponible, con mínimo 200px */
+  max-height: 80vh; /* Máximo 80% de la ventana para evitar problemas en pantallas pequeñas */
   overflow:auto;
   overflow-y: scroll;
 }
 
 table{border-collapse:collapse;width:100%;table-layout:fixed;}
 th, td{
-  padding:6px 8px;
-  border:1px solid var(--input-border); 
-  white-space:nowrap; 
-  font-family:var(--font-main, monospace); 
-  font-size:13px; 
+  padding: calc(var(--custom-font-size, 14px) * 0.4) calc(var(--custom-font-size, 14px) * 0.57);
+  border:1px solid var(--input-border);
+  white-space:nowrap;
+  font-family:var(--font-main, monospace);
+  font-size:var(--custom-font-size, 14px);
 }
 
 th[data-col] {
@@ -267,12 +952,14 @@ td.editable-cell:focus {
   }
 }
 
+.edit-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .edit-badge {
   display: none;
-  position: sticky;
-  top: 8px;
-  align-self: flex-start;
-  margin-top: 8px;
   padding: 6px 12px;
   border-radius: 999px;
   background: rgba(255, 193, 7, 0.18);
@@ -281,10 +968,19 @@ td.editable-cell:focus {
   border: 1px solid rgba(255, 193, 7, 0.4);
   box-shadow: 0 2px 6px rgba(255, 193, 7, 0.22);
   gap: 6px;
-  display: inline-flex;
   align-items: center;
-  z-index: 6;
   animation: badgePulse 1.8s ease-in-out infinite;
+}
+
+.edit-badge .edit-count {
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(130, 83, 0, 0.8);
+  margin-left: 4px;
+}
+
+body.dark .edit-badge .edit-count {
+  color: rgba(255, 235, 180, 0.85);
 }
 
 body.dark .edit-badge {
@@ -399,68 +1095,65 @@ td.editable-cell:focus {
   outline: 2px solid rgba(41, 121, 255, 0.16); 
 }
 @keyframes filterBlink {
-  0% { 
-    background-color: var(--cell-even); 
-    opacity: 1; 
+  0% {
+    background-color: var(--cell-even);
+    opacity: 1;
   }
-  25% { 
-    background-color: rgba(255, 235, 59, 0.2); 
-    opacity: 1; 
+  50% {
+    background-color: rgba(255, 235, 59, 0.3);
+    opacity: 1;
   }
-  50% { 
-    background-color: rgba(255, 235, 59, 0.35); 
-    opacity: 1; 
-  }
-  75% { 
-    background-color: rgba(255, 235, 59, 0.2); 
-    opacity: 1; 
-  }
-  100% { 
-    background-color: var(--cell-even); 
-    opacity: 1; 
+  100% {
+    background-color: var(--cell-even);
+    opacity: 1;
   }
 }
 
 @keyframes filterBlinkOdd {
-  0% { 
-    background-color: var(--cell-odd); 
-    opacity: 1; 
+  0% {
+    background-color: var(--cell-odd);
+    opacity: 1;
   }
-  25% { 
-    background-color: rgba(255, 235, 59, 0.15); 
-    opacity: 1; 
+  50% {
+    background-color: rgba(255, 235, 59, 0.3);
+    opacity: 1;
   }
-  50% { 
-    background-color: rgba(255, 235, 59, 0.3); 
-    opacity: 1; 
-  }
-  75% { 
-    background-color: rgba(255, 235, 59, 0.15); 
-    opacity: 1; 
-  }
-  100% { 
-    background-color: var(--cell-odd); 
-    opacity: 1; 
+  100% {
+    background-color: var(--cell-odd);
+    opacity: 1;
   }
 }
 
-.global-match {
-  animation: filterBlink 0.8s ease-in-out;
+@keyframes smoothBlink {
+  0% {
+    background-color: var(--blink-origin, transparent);
+  }
+  50% {
+    background-color: rgba(255, 235, 59, 0.3);
+  }
+  100% {
+    background-color: var(--blink-origin, transparent);
+  }
 }
 
-.column-match {
-  animation: filterBlink 0.6s ease-in-out;
+.blink-cell {
+  animation: smoothBlink 1s ease-in-out 1 forwards;
 }
 
-tbody tr:nth-child(even) .global-match,
-tbody tr:nth-child(even) .column-match {
-  animation: filterBlink 0.8s ease-in-out;
+mark.highlight {
+  background-color: rgba(255, 235, 59, 0.6);
+  color: #000;
+  padding: 0;
+  border-radius: 2px;
 }
 
-tbody tr:nth-child(odd) .global-match,
-tbody tr:nth-child(odd) .column-match {
-  animation: filterBlinkOdd 0.8s ease-in-out;
+.dark mark.highlight {
+  background-color: rgba(255, 221, 87, 0.8);
+  color: #000;
+  padding: 0;
 }
+
+/* Reglas antiguas removidas para simplicidad */
 
 #rawDisplay{
   display:none;
@@ -481,17 +1174,12 @@ tbody tr:nth-child(odd) .column-match {
 .show-with-data{
   display:flex;
 }
-
 @media (max-width:720px){
   #drawer{width:100vw}
   thead tr.filter-row th{ top: calc(var(--th-height) + 2px) }
 }
 
-/* Estilos de urlClearBtn movidos a la regla anterior */
-
 .custom-panel {
-  display: flex;
-  flex-direction: column;
   gap: 12px;
   padding: 20px;
   border: 1px solid var(--input-border);
@@ -513,7 +1201,186 @@ tbody tr:nth-child(odd) .column-match {
   border-color: #555;
 }
 
-.dark .font-selector {
+
+.preset-dropdown,
+.language-presets,
+.history-presets,
+.theme-presets {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  background: var(--input-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  overflow: visible;
+}
+.preset-dropdown-title,
+.language-presets-title,
+.history-presets-title,
+.theme-presets-title {
+  font-weight: 700;
+  color: var(--fg);
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preset-dropdown-trigger {
+  position: relative;
+  width: 100%;
+}
+
+.preset-dropdown-toggle,
+.language-presets-toggle,
+.history-presets-toggle,
+.theme-presets-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--input-border);
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+  width: 100%;
+  min-height: 40px;
+}
+
+.preset-dropdown-toggle:hover,
+.preset-dropdown-toggle:focus,
+.language-presets-toggle:hover,
+.language-presets-toggle:focus,
+.history-presets-toggle:hover,
+.history-presets-toggle:focus,
+.theme-presets-toggle:hover,
+.theme-presets-toggle:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.preset-dropdown-selected,
+.language-presets-selected,
+.history-presets-selected,
+.theme-presets-selected {
+  flex: 1;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preset-dropdown-caret,
+.language-presets-caret,
+.history-presets-caret,
+.theme-presets-caret {
+  font-size: 16px;
+}
+
+.preset-dropdown-menu,
+.language-presets-dropdown,
+.history-presets-dropdown,
+.theme-presets-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  background: var(--input-bg);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.12);
+  max-height: 220px;
+  overflow-y: auto;
+  width: 100%;
+  z-index: 200;
+  transform: translateZ(0);
+}
+
+.preset-dropdown-menu[hidden],
+.language-presets-dropdown[hidden],
+.history-presets-dropdown[hidden],
+.theme-presets-dropdown[hidden] {
+  display: none !important;
+}
+
+.preset-dropdown-list,
+.language-presets-list,
+.history-presets-list,
+.theme-presets-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+}
+
+.preset-dropdown-item,
+.language-preset-item,
+.history-preset-item,
+.theme-preset-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  border: 1px solid transparent;
+  background: #fff;
+}
+
+.preset-dropdown-item:hover,
+.language-preset-item:hover,
+.history-preset-item:hover,
+.theme-preset-item:hover {
+  background: rgba(var(--accent-rgb, 0, 102, 255), 0.16);
+  border-color: rgba(var(--accent-rgb, 0, 102, 255), 0.25);
+}
+
+.preset-dropdown-item[aria-selected="true"],
+.language-preset-item[aria-selected="true"],
+.history-preset-item[aria-selected="true"],
+.theme-preset-item[aria-selected="true"] {
+  background: #fff;
+  border-color: transparent;
+}
+
+.preset-dropdown-item[aria-selected="true"]:hover,
+.language-preset-item[aria-selected="true"]:hover,
+.history-preset-item[aria-selected="true"]:hover,
+.theme-preset-item[aria-selected="true"]:hover {
+  background: rgba(var(--accent-rgb, 0, 102, 255), 0.16);
+  border-color: rgba(var(--accent-rgb, 0, 102, 255), 0.25);
+}
+
+.preset-dropdown-name,
+.language-preset-name,
+.history-preset-name,
+.preset-name-btn {
+  flex: 1;
+  text-align: left;
+  background: transparent;
+  color: var(--fg);
+  border: none;
+  padding: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.font-selector,
+#fontFamily {
+  width: 100px;
+}
+
+.dark .font-selector,
+.dark #fontFamily {
   background: #333;
   border-color: #555;
   color: #fff;
@@ -538,7 +1405,7 @@ tbody tr:nth-child(odd) .column-match {
   display: flex;
   justify-content: normal;
   align-items: center;
-  padding: 10px 0;
+  padding: 6px 0;
   width: 100%;
   margin: 0 auto;
 }
@@ -549,72 +1416,382 @@ tbody tr:nth-child(odd) .column-match {
   color: var(--fg);
   font-size: 14px;
   text-align: right;
-  margin-right: 15px;
+  margin-right: 6px;
   cursor: default; 
   user-select: none;
+  pointer-events: none;
   padding: 5px 0;
 }
 
 .setting-row input[type="color"] {
-  width: 60px;
-  height: 32px;
+  width: 48px;
+  height: 22px;
   border: 1px solid var(--input-border);
-  border-radius: 4px;
+  border-radius: 6px;
+  background: transparent;
   cursor: pointer;
-  background: #ffffff;
-  padding: 2px;
-  transition: all 0.2s ease;
-  outline: none;
+  padding: 0;
+  box-sizing: border-box;
   -webkit-appearance: none;
   appearance: none;
 }
 
-.dark .setting-row input[type="color"] {
-  background: #333333;
-  border-color: #555555;
-}
-
-.setting-row input[type="color"]::-webkit-color-swatch {
-  border: none;
-  border-radius: 2px;
-  padding: 0;
-}
-
+.setting-row input[type="color"]::-webkit-color-swatch,
 .setting-row input[type="color"]::-webkit-color-swatch-wrapper {
+  border: none;
+  border-radius: 4px;
   padding: 0;
 }
 
-.setting-row input[type="color"]:focus,
-.font-selector:focus,
-button:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--accent);
+.setting-row input[type="color"]::-moz-color-swatch {
+  border: none;
+  border-radius: 4px;
+}
+
+.setting-row input[type="color"]:hover {
+  transform: scale(1.01);
 }
 
 .setting-row input[type="color"]:active {
   transform: scale(0.98);
 }
 
-.font-selector {
-  width: 160px;
-  padding: 6px 8px;
-  border-radius: 4px;
+
+.theme-presets {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  background: var(--input-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+}
+
+.theme-presets-title {
+  font-weight: 600;
+  color: var(--fg);
+  text-align: center;
+}
+
+.theme-presets-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 6px;
   border: 1px solid var(--input-border);
   background: var(--bg);
   color: var(--fg);
-  font-size: 14px;
   cursor: pointer;
+  width: 100%;
+  min-height: 40px;
 }
 
-.reset-container {
+.theme-presets-toggle:hover,
+.theme-presets-toggle:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.theme-presets-selected {
+  flex: 1;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: left;
+}
+
+.theme-presets-caret {
+  font-size: 16px;
+}
+
+.theme-presets-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  background: var(--bg);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.18);
+  max-height: 220px;
+  overflow-y: auto;
+  width: 100%;
+  z-index: 200;
+}
+
+.language-presets-dropdown[hidden],
+.history-presets-dropdown[hidden],
+.theme-presets-dropdown[hidden] {
+  display: none !important;
+}
+
+.theme-presets-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+}
+
+.theme-presets-empty {
+  font-size: 13px;
+  color: var(--muted);
+  padding: 8px;
+}
+
+.theme-presets-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.theme-action-btn {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--button-border);
+  background: var(--button-bg);
+  color: var(--fg);
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  max-width: 180px;
+}
+
+.theme-action-btn:hover,
+.theme-action-btn:focus {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  outline: none;
+}
+
+.theme-presets-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+}
+
+.theme-presets-empty {
+  font-size: 13px;
+  color: var(--muted);
+  padding: 8px;
+}
+
+.theme-preset-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  transition: background 0.2s ease;
+}
+
+.theme-preset-item:hover {
+  background: rgba(var(--accent-rgb, 0, 102, 255), 0.12);
+}
+
+.preset-name-btn {
+  flex: 1;
+  text-align: left;
+  background: transparent;
+  color: var(--fg);
+  border: none;
+  padding: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.preset-inline-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.preset-inline-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid var(--button-border);
+  background: var(--button-bg);
+  color: var(--fg);
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease;
+  font-size: 15px;
+}
+
+.preset-inline-btn:hover {
+  transform: translateY(-1px);
+}
+
+.preset-inline-rename:hover {
+  background: rgba(76, 175, 80, 0.2);
+  border-color: rgba(76, 175, 80, 0.4);
+}
+
+.preset-inline-delete:hover {
+  background: rgba(244, 67, 54, 0.2);
+  border-color: rgba(244, 67, 54, 0.4);
+}
+
+.theme-presets-meta {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.language-presets {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  background: var(--input-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+}
+
+.language-presets-title {
+  font-weight: 600;
+  color: var(--fg);
   text-align: center;
-  margin-top: 20px;
-  padding-top: 10px;
-  border-top: 1px solid var(--input-border);
+}
+
+.language-presets-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--input-border);
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+  width: 100%;
+  min-height: 40px;
+}
+
+.language-presets-toggle:hover,
+.language-presets-toggle:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.language-presets-selected {
+  flex: 1;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: left;
+}
+
+.language-presets-caret {
+  font-size: 16px;
+}
+
+.language-presets-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  background: var(--input-bg);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.12);
+  max-height: 220px;
+  overflow-y: auto;
+  width: 100%;
+  z-index: 200;
+}
+
+.language-presets-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+}
+
+.history-preset-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  transition: background 0.2s ease;
+}
+
+.history-preset-item:hover {
+  background: rgba(var(--accent-rgb, 0, 102, 255), 0.12);
+}
+
+.history-preset-name {
+  flex: 1;
+  text-align: left;
+  background: transparent;
+  color: var(--fg);
+  border: none;
+  padding: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.history-inline-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.history-inline-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid var(--button-border);
+  background: var(--button-bg);
+  color: var(--fg);
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease;
+  font-size: 15px;
+}
+
+.history-inline-btn:hover {
+  transform: translateY(-1px);
+}
+
+.history-inline-rename:hover {
+  background: rgba(76, 175, 80, 0.2);
+  border-color: rgba(76, 175, 80, 0.4);
+}
+
+.history-inline-delete:hover {
+  background: rgba(244, 67, 54, 0.2);
+  border-color: rgba(244, 67, 54, 0.4);
+}
+
+
+.reset-container {
+  margin: 0 auto;
+  padding: 6px 0 0;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  width: 100%;
+  max-width: 320px;
 }
 
 .setting-row input[type="color"]:hover {
-  transform: scale(1.05);
+  transform: scale(1.01);
 }
 
 .reset-btn {
@@ -626,12 +1803,8 @@ button:focus {
   cursor: pointer;
   font-size: 14px;
   transition: all 0.2s ease;
-  margin-top: 8px;
-  width: 100%;
-  max-width: 280px;
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
+  flex: 1;
+  max-width: 220px;
 }
 
 .reset-btn:hover {
@@ -646,13 +1819,13 @@ button:focus {
 }
 
 #fontFamily {
-  width: 100%;
+  width: 100px;
   padding: 10px;
   border-radius: 6px;
   border: 1px solid var(--input-border);
   background: var(--bg);
   color: var(--fg);
-  font-size: 14px;
+  font-size: 12px;
   cursor: pointer;
   transition: border-color 0.2s ease;
 }
@@ -671,7 +1844,8 @@ button:focus {
   border: 1px solid var(--input-border);
   background: var(--input-bg);
   color: var(--fg);
-  min-width: 150px;
+  min-width: 100px;
+  font-size: var(--custom-font-size, 12px);
 }
 
 #fontFamily option {
@@ -707,13 +1881,14 @@ html {
   </div>
 
   <div class="row">
+    <label for="jsonin" class="sr-only">Contenido JSON</label>
     <textarea id="jsonin" aria-label="Área JSON" placeholder="Pega o escribe JSON aquí" data-i18n-placeholder="jsonPlaceholder" data-i18n-aria-label="jsonPlaceholder"></textarea>
   </div>
 
   <div class="row">
     <button id="clearBtn" aria-label="Limpiar JSON" title="Limpiar JSON" data-i18n="clearJson" data-i18n-title="clearJson" data-i18n-aria-label="clearJson">Limpiar JSON</button>
 
-    <label style="display:flex;align-items:center;gap:6px">
+    <label for="separatorSelect" style="display:flex;align-items:center;gap:6px">
       <span id="separatorLabel" data-i18n="separator">Separador:</span>
       <select id="separatorSelect" aria-label="Separador" data-i18n-aria-label="separator">
         <option value="	">Tab</option>
@@ -722,6 +1897,7 @@ html {
       </select>
     </label>
 
+    <label for="downloadSelect" class="sr-only" data-i18n="download">Descargar</label>
     <select id="downloadSelect" aria-label="Descargar" disabled data-i18n-aria-label="download">
       <option value="" id="downloadOption" data-i18n="download">Descargar...</option>
       <option value="csv">CSV</option>
@@ -739,14 +1915,16 @@ html {
       <input type="text" id="filterGlobal" class="filter-global" placeholder="Filtro global..." autocomplete="off" data-i18n-placeholder="globalFilter" data-i18n-aria-label="globalFilter" />
       <button id="filterGlobalClearBtn" class="clear-btn" title="Limpiar filtro global" aria-label="Limpiar filtro global" data-i18n-title="clearFilter" data-i18n-aria-label="clearFilter">✕</button>
     </div>
-    <button id="editBtn" aria-label="Editar tabla" title="Habilitar/deshabilitar edición" disabled data-i18n-title="toggleEdit" data-i18n-aria-label="toggleEdit">✏️ <span id="editBtnText">Editar</span></button>
+    <div class="edit-controls">
+      <button id="editBtn" aria-label="Editar tabla" title="Habilitar/deshabilitar edición" disabled data-i18n-title="toggleEdit" data-i18n-aria-label="toggleEdit"><span id="editBtnText" data-i18n="edit">✏️</span></button>
+      <div id="editModeBadge" class="edit-badge" role="status" aria-live="polite" aria-hidden="true" data-count="0">
+        ✏️ <span data-i18n="editModeActive">Modo edición activo</span>
+        <span id="editModeCount" class="edit-count">(0)</span>
+      </div>
+    </div>
   </div>
 
   <div id="tableWrap" aria-live="polite">
-  </div>
-
-  <div id="editModeBadge" class="edit-badge" role="status" aria-live="polite" aria-hidden="true">
-    ✏️ <span data-i18n="editModeActive">Modo edición activo</span>
   </div>
 
   <div id="liveRegion" class="sr-only" aria-live="polite" aria-atomic="true"></div>
@@ -754,56 +1932,59 @@ html {
   <div style="margin-top:8px">
     <textarea id="rawDisplay" readonly aria-label="Raw CSV" data-i18n-aria-label="rawCsv"></textarea>
   </div>
+
+  <!-- Mensaje flotante para copiado -->
+  <div id="copyMessage" class="copy-message" data-i18n="tableCopied" style="display: none; position: fixed; background: rgba(0, 0, 0, 0.8); color: white; padding: 10px 20px; border-radius: 8px; z-index: 10000; font-size: 14px; pointer-events: none;">Tabla copiada al portapapeles</div>
 </div>
+</div>
+
+<div id="drawerOverlay" class="drawer-overlay" tabindex="-1" aria-hidden="true"></div>
 
 <div id="drawer" role="dialog" aria-label="Configuración" style="position:fixed; padding-top:48px;">
   <button id="drawerCloseBtn" class="tab-btn" aria-label="Cerrar configuración" title="Cerrar configuración" style="position:absolute;top:10px;left:10px;width:36px;height:36px;font-size:22px;z-index:10001;display:flex;align-items:center;justify-content:center;line-height:36px;" data-i18n-title="closeConfiguration" data-i18n-aria-label="closeConfiguration">✕</button>
   <div class="tab-bar">
-    <button class="tab-btn active" id="tabConfig" aria-label="Configuración" aria-selected="true" role="tab" data-i18n-aria-label="configuration">
-      <span id="tabConfigText">Configuración</span>
+    <button class="tab-btn active" id="tabConfig" aria-label="Configuración" aria-selected="true" role="tab" data-i18n="configuration" data-i18n-aria-label="configuration">
+      <span id="tabConfigText" data-i18n="configuration">Configuración</span>
     </button>
-    <button class="tab-btn" id="tabCustom" aria-label="Tema personalizado" aria-selected="false" role="tab" data-i18n-aria-label="customTheme">
-      <span id="tabCustomText">Tema personalizado</span>
+    <button class="tab-btn" id="tabCustom" aria-label="Tema personalizado" aria-selected="false" role="tab" data-i18n="customTheme" data-i18n-aria-label="customTheme">
+      <span id="tabCustomText" data-i18n="customTheme">Tema personalizado</span>
     </button>
   </div>
 
   <div id="configContent" class="active">
 
     <div style="display:flex;gap:8px;margin-bottom:10px;">
-      <button id="themeLight" aria-label="Cambiar a modo claro" title="Modo claro" data-i18n-title="lightMode" data-i18n-aria-label="lightMode">🌞</button>
+      <button id="themeLight" aria-label="Cambiar a modo claro" title="Modo claro" data-i18n-title="lightMode" data-i18n-aria-label="lightMode">☀️</button>
       <button id="themeDark" aria-label="Cambiar a modo oscuro" title="Modo oscuro" data-i18n-title="darkMode" data-i18n-aria-label="darkMode">🌙</button>
     </div>
 
-    <label>
-      <span id="languageLabel" data-i18n="language">Idioma:</span>
-      <select id="languageSelect" style="width:100%;margin-top:6px">
-        <option value="en" id="languageOptionEn" data-i18n="languageEnglishDefault">English (default)</option>
-        <option value="es" id="languageOptionEs" data-i18n="languageSpanish">Español</option>
-      </select>
-    </label>
+    <div class="preset-dropdown" aria-label="Lenguaje" data-i18n-aria-label="language">
+      <span id="languageLabel" class="preset-dropdown-title" data-i18n="language">Idioma</span>
+      <div class="preset-dropdown-trigger">
+        <button id="languageToggle" class="preset-dropdown-toggle" type="button" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="languageSelected">
+          <span id="languageSelected" class="preset-dropdown-selected" data-i18n="selectLanguageOption">-- Seleccionar idioma --</span>
+          <span class="preset-dropdown-caret" aria-hidden="true">▾</span>
+        </button>
+        <div id="languageDropdown" class="preset-dropdown-menu" role="listbox" hidden>
+          <div id="languageList" class="preset-dropdown-list"></div>
+        </div>
+      </div>
+    </div>
 
-    <div style="margin-top:12px;">
-      <label>
-        <span id="historyLabel" data-i18n="jsonHistory">Historial JSON:</span>
-        <select id="jsonHistorySelect" style="width:100%;margin-top:6px">
-          <option value="" id="selectJsonOption">-- Seleccionar JSON --</option>
-        </select>
-      </label>
+    <div class="preset-dropdown" aria-label="Historial JSON" data-i18n-aria-label="jsonHistory">
+      <span id="historyLabel" class="preset-dropdown-title" data-i18n="jsonHistory">Historial JSON</span>
+      <div class="preset-dropdown-trigger">
+        <button id="jsonHistoryToggle" class="preset-dropdown-toggle" type="button" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="jsonHistorySelected">
+          <span id="jsonHistorySelected" class="preset-dropdown-selected" data-i18n="selectJsonOption">-- Seleccionar JSON --</span>
+          <span class="preset-dropdown-caret" aria-hidden="true">▾</span>
+        </button>
+        <div id="jsonHistoryDropdown" class="preset-dropdown-menu" role="listbox" aria-labelledby="historyLabel jsonHistorySelected" hidden>
+          <div id="jsonHistoryList" class="preset-dropdown-list"></div>
+        </div>
+      </div>
       <div class="history-search">
         <label for="historySearchInput" class="sr-only">Buscar historial</label>
         <input type="text" id="historySearchInput" placeholder="Buscar en historial..." autocomplete="off" data-i18n-placeholder="historySearchPlaceholder" />
-      </div>
-      <div class="history-meta" id="historyMeta" aria-live="polite"></div>
-      <div style="display:flex;gap:6px;margin-top:6px;">
-        <button id="loadHistoryBtn" aria-label="Cargar historial" title="Cargar historial" disabled data-i18n-title="load" data-i18n-aria-label="load">
-          <span id="loadHistoryText">Cargar</span>
-        </button>
-        <button id="renameHistoryBtn" aria-label="Renombrar entrada del historial" title="Renombrar entrada" data-i18n-title="rename" data-i18n-aria-label="rename">
-          <span id="renameHistoryText">Renombrar</span>
-        </button>
-        <button id="deleteHistoryBtn" aria-label="Eliminar entrada del historial" title="Eliminar entrada" disabled data-i18n-title="delete" data-i18n-aria-label="delete">
-          <span id="deleteHistoryText">Eliminar</span>
-        </button>
       </div>
     </div>
 
@@ -819,32 +2000,41 @@ html {
 
     <div class="setting-container">
       <div class="setting-row">
-        <label id="bgColorLabel" data-i18n="background">Fondo</label>
+        <label id="bgColorLabel" data-i18n="background" for="bgColor">Fondo</label>
         <input type="color" id="bgColor" value="#ffffff">
       </div>
 
       <div class="setting-row">
-        <label id="textColorLabel" data-i18n="text">Texto</label>
+        <label id="textColorLabel" data-i18n="text" for="textColor">Texto</label>
         <input type="color" id="textColor" value="#000000">
       </div>
 
       <div class="setting-row">
-        <label id="cellOddLabel" data-i18n="oddCells">Celdas impares</label>
+        <label id="fontSizeLabel" data-i18n="fontSize" for="fontSize">Tamaño de fuente</label>
+        <input type="number" id="fontSize" min="5" max="30" step="1" value="14" aria-label="Tamaño de fuente" data-i18n-aria-label="fontSize">
+      </div>
+
+      <div class="setting-row">
+        <label id="headerColorLabel" data-i18n="headerCells" for="headerColor">Encabezados</label>
+        <input type="color" id="headerColor" value="#f2f2f2">
+      </div>
+
+      <div class="setting-row">
+        <label id="cellOddLabel" data-i18n="oddCells" for="cellOdd">Celdas impares</label>
         <input type="color" id="cellOdd" value="#f0f0f0">
       </div>
 
       <div class="setting-row">
-        <label id="cellEvenLabel" data-i18n="evenCells">Celdas pares</label>
+        <label id="cellEvenLabel" data-i18n="evenCells" for="cellEven">Celdas pares</label>
         <input type="color" id="cellEven" value="#ffffff">
       </div>
 
       <div class="setting-row">
-        <label id="fontFamilyLabel" data-i18n="typography">Tipografía</label>
+        <label id="fontFamilyLabel" data-i18n="typography" for="fontFamily">Tipografía</label>
         <select id="fontFamily" class="font-selector">
-          <option value="'Inter', Arial, sans-serif">Inter (predeterminada)</option>
+          <option value="'Segoe UI', Tahoma, sans-serif">Segoe UI</option>
           <option value="'Roboto', Arial, sans-serif">Roboto</option>
           <option value="'Open Sans', Arial, sans-serif">Open Sans</option>
-          <option value="'Segoe UI', Tahoma, sans-serif">Segoe UI</option>
           <option value="'Helvetica Neue', Arial, sans-serif">Helvetica</option>
           <option value="'Times New Roman', Times, serif">Times New Roman</option>
           <option value="'Courier New', Courier, monospace">Courier New</option>
@@ -853,163 +2043,519 @@ html {
       </div>
     </div>
 
-    <div class="reset-container">
-      <button id="customDefaultBtn" class="reset-btn" aria-label="Restablecer valores predeterminados" title="Restablecer valores predeterminados" data-i18n-title="default" data-i18n-aria-label="default">
-        <span id="customDefaultText" data-i18n="default">Restablecer valores predeterminados</span>
-      </button>
+    <div class="preset-dropdown" aria-label="Temas guardados" data-i18n-aria-label="themePresets">
+      <span class="preset-dropdown-title" data-i18n="themePresets">Temas guardados</span>
+      <div class="preset-dropdown-trigger">
+        <button id="themePresetToggle" class="preset-dropdown-toggle" type="button" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="themePresetSelected">
+          <span id="themePresetSelected" class="preset-dropdown-selected" data-i18n="themePresetPlaceholder">-- Seleccionar tema --</span>
+          <span class="preset-dropdown-caret" aria-hidden="true">▾</span>
+        </button>
+        <div id="themePresetDropdown" class="preset-dropdown-menu" role="listbox" aria-labelledby="themePresetSelected" hidden>
+          <div id="themePresetList" class="preset-dropdown-list"></div>
+        </div>
+      </div>
+      <div class="theme-presets-actions">
+        <button id="customSaveBtn" class="theme-action-btn" aria-label="Guardar tema" title="Guardar tema" data-i18n="saveTheme" data-i18n-title="saveTheme" data-i18n-aria-label="saveTheme">
+          <span id="customSaveText" data-i18n="saveTheme">Guardar tema</span>
+        </button>
+        <button id="customDefaultBtn" class="theme-action-btn" aria-label="Restablecer valores predeterminados" title="Restablecer valores predeterminados" data-i18n="default" data-i18n-title="default" data-i18n-aria-label="default">
+          <span id="customDefaultText" data-i18n="default">Restablecer valores predeterminados</span>
+        </button>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
-
-const translations = {
-  es: {
-        clearJson: 'Limpiar JSON',
-    separator: 'Separador:',
-    download: 'Descargar...',
-    showRaw: 'Mostrar Raw',
-    hideRaw: 'Ocultar Raw',
-    copyTable: 'Copiar tabla',
-    globalFilter: 'Filtro global...',
-    edit: 'Editar',
-    save: 'Guardar',
-    noTable: 'No hay tabla para mostrar',
-    noResults: 'No hay resultados para el filtro',
-    invalidJson: 'JSON inválido',
-
-        configuration: 'Configuración',
-    customTheme: 'Tema personalizado',
-    language: 'Idioma:',
-    languageEnglishDefault: 'Inglés (predeterminado)',
-    languageSpanish: 'Español',
-    jsonHistory: 'Historial JSON:',
-    selectJson: '-- Seleccionar JSON --',
-    historySearchPlaceholder: 'Buscar en historial...',
-    historyCount: 'Mostrando {current} de {total} (máximo {limit})',
-    historyNoMatches: 'Sin coincidencias en el historial',
-    historySizeExceeded: 'El JSON es demasiado grande para guardar en el historial.',
-    sortColumnDefault: 'Ordenar por {column}. Presiona para cambiar el orden.',
-    sortColumnAsc: '{column} ordenado ascendente. Presiona para ordenar descendente.',
-    sortColumnDesc: '{column} ordenado descendente. Presiona para ordenar ascendente.',
-    lastJsonSizeExceeded: 'El JSON es demasiado grande para guardarlo localmente.',
-    urlControls: 'Controles de URL',
-    urlPlaceholder: 'Pega URL aquí...',
-    jsonPlaceholder: 'Pega o escribe JSON aquí',
-    clearUrl: 'Limpiar URL',
-    openConfiguration: 'Abrir configuración',
-    closeConfiguration: 'Cerrar configuración',
-    lightMode: 'Cambiar a modo claro',
-    darkMode: 'Cambiar a modo oscuro',
-    toggleRaw: 'Mostrar u ocultar JSON raw',
-    toggleEdit: 'Habilitar o deshabilitar edición',
-    rawCsv: 'Ver CSV en bruto',
-    load: 'Cargar',
-    rename: 'Renombrar',
-    delete: 'Eliminar',
-    webMobile: 'Web / Móvil',
-    editModeActive: 'Modo edición activo',
-    sortAnnounceAsc: '{column} ordenado ascendente.',
-    sortAnnounceDesc: '{column} ordenado descendente.',
-    sortAnnounceReset: 'Orden sin aplicar en {column}.',
-    filterCleared: 'Filtro de {column} eliminado.',
-    globalFilterCleared: 'Filtro global eliminado.',
-
-        customizeTheme: 'Personalizar tema',
-    background: 'Fondo:',
-    text: 'Texto:',
-    typography: 'Tipografía:',
-    evenCells: 'Celdas pares:',
-    oddCells: 'Celdas impares:',
-    default: 'Default',
-
-        copied: 'Copiado',
-    loading: 'Cargando...',
-    loadUrl: 'Cargar URL',
-    errorLoadingUrl: 'Error cargando URL',
-    loadJsonFromHistory: '¿Cargar este JSON desde el historial?',
-    selectJsonFromHistory: 'Selecciona un JSON del historial',
-    newName: 'Nuevo nombre:',
-    selectItemToDelete: 'Selecciona un elemento para eliminar',
-    deleteFromHistory: 'Eliminar este JSON del historial?',
-    resetThemeConfirm: '¿Restablecer el tema a los valores predeterminados?',
-    filterColumn: 'Filtrar...',
-    clearFilter: 'Limpiar'
+// Configuración de seguridad
+const securityConfig = {
+  // Dominios permitidos para fetch
+  allowedDomains: [
+    'api.example.com',
+    'data.example.org'
+  ],
+  
+  // Configuración de CSP
+  csp: {
+    reportOnly: window.location.hostname === 'localhost',
+    reportUri: '/csp-violation-report-endpoint'
   },
-  en: {
-        clearJson: 'Clear JSON',
-    separator: 'Separator:',
-    download: 'Download...',
-    showRaw: 'Show Raw',
-    hideRaw: 'Hide Raw',
-    copyTable: 'Copy table',
-    globalFilter: 'Global filter...',
-    edit: 'Edit',
-    save: 'Save',
-    noTable: 'No table to display',
-    noResults: 'No results for filter',
-    invalidJson: 'Invalid JSON',
-
-        configuration: 'Configuration',
-    customTheme: 'Custom theme',
-    language: 'Language:',
-    languageEnglishDefault: 'English (default)',
-    languageSpanish: 'Spanish',
-    jsonHistory: 'JSON History:',
-    selectJson: '-- Select JSON --',
-    historySearchPlaceholder: 'Search history...',
-    historyCount: 'Showing {current} of {total} (max {limit})',
-    historyNoMatches: 'No matches in history',
-    historySizeExceeded: 'JSON is too large to store in history.',
-    sortColumnDefault: 'Sort by {column}. Press to change order.',
-    sortColumnAsc: '{column} sorted ascending. Press to sort descending.',
-    sortColumnDesc: '{column} sorted descending. Press to sort ascending.',
-    lastJsonSizeExceeded: 'JSON is too large to store locally.',
-    urlControls: 'URL controls',
-    urlPlaceholder: 'Paste URL here...',
-    jsonPlaceholder: 'Paste or type JSON here',
-    clearUrl: 'Clear URL',
-    openConfiguration: 'Open configuration',
-    closeConfiguration: 'Close configuration',
-    lightMode: 'Switch to light mode',
-    darkMode: 'Switch to dark mode',
-    toggleRaw: 'Show or hide raw JSON',
-    toggleEdit: 'Enable or disable editing',
-    rawCsv: 'View raw CSV',
-    load: 'Load',
-    rename: 'Rename',
-    delete: 'Delete',
-    webMobile: 'Web / Mobile',
-    editModeActive: 'Edit mode active',
-    sortAnnounceAsc: '{column} sorted ascending.',
-    sortAnnounceDesc: '{column} sorted descending.',
-    sortAnnounceReset: 'Sorting cleared on {column}.',
-    filterCleared: 'Filter cleared for {column}.',
-    globalFilterCleared: 'Global filter cleared.',
-
-        customizeTheme: 'Customize theme',
-    background: 'Background:',
-    text: 'Text:',
-    typography: 'Typography:',
-    evenCells: 'Even cells:',
-    oddCells: 'Odd cells:',
-    default: 'Default',
-
-        copied: 'Copied',
-    loading: 'Loading...',
-    loadUrl: 'Load URL',
-    errorLoadingUrl: 'Error loading URL',
-    loadJsonFromHistory: 'Load this JSON from history?',
-    selectJsonFromHistory: 'Select a JSON from history',
-    newName: 'New name:',
-    selectItemToDelete: 'Select an item to delete',
-    deleteFromHistory: 'Delete this JSON from history?',
-    resetThemeConfirm: 'Reset theme to default values?',
-    filterColumn: 'Filter...',
-    clearFilter: 'Clear'
+  
+  // Configuración de cabeceras de seguridad (deben configurarse en el servidor)
+  securityHeaders: {
+    'Cross-Origin-Opener-Policy': 'same-origin',
+    'Cross-Origin-Resource-Policy': 'same-site',
+    'Cross-Origin-Embedder-Policy': 'require-corp'
   }
 };
 
+// Inicializar seguridad - Configuración mínima para desarrollo
+if (typeof Security !== 'undefined') {
+  const extendedDomains = [...securityConfig.allowedDomains];
+  if (['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+    extendedDomains.push('jsonplaceholder.typicode.com');
+  }
+
+  Security.ALLOWED_DOMAINS = extendedDomains;
+
+  if (Security.CSP_CONFIG && Array.isArray(Security.CSP_CONFIG.connectSrc)) {
+    Security.CSP_CONFIG.connectSrc = ["'self'", ...extendedDomains];
+  }
+
+  if (securityConfig.csp?.reportUri) {
+    Security.CSP_CONFIG.reportUri = securityConfig.csp.reportUri;
+  }
+
+  console.warn('ADVERTENCIA: Para una configuración de seguridad óptima, configura los siguientes encabezados HTTP en tu servidor:');
+
+  let cspHeader = "default-src 'self'";
+  if (typeof Security.getCSPHeader === 'function') {
+    cspHeader = Security.getCSPHeader(false);
+    if (securityConfig.csp?.reportOnly) {
+      console.log('Content-Security-Policy-Report-Only:', Security.getCSPHeader(true));
+    }
+  }
+  console.log('Content-Security-Policy:', cspHeader);
+  console.log('X-Frame-Options: DENY');
+  console.log('X-Content-Type-Options: nosniff');
+  console.log('X-XSS-Protection: 1; mode=block');
+  console.log('Referrer-Policy: strict-origin-when-cross-origin');
+}
+
+// Objeto de traducciones completo
+const translations = {
+  es: {
+    // Interfaz principal
+    'appTitle': 'JSON a Tabla',
+    'loadUrl': 'Cargar URL',
+    
+    // Modo gigante
+    'enableGiantMode': 'Activar modo gigante (mejor rendimiento para tablas grandes)',
+    'disableGiantMode': 'Desactivar modo gigante',
+    'giantModeEnabled': 'Modo gigante activado. Se mostrarán los datos en bloques para mejor rendimiento.',
+    'giantModeDisabled': 'Modo gigante desactivado. Se mostrarán todos los datos a la vez.',
+    
+    'edit': '✏️',
+    'save': '💾',
+    'cancel': 'Cancelar',
+    'clearJson': 'Limpiar JSON',
+    'showRaw': 'Ver JSON',
+    'copyTable': 'Copiar tabla',
+    'globalFilter': 'Filtrar...',
+    'configuration': 'Configuración',
+    'customTheme': 'Tema personalizado',
+    'language': 'Idioma',
+    'jsonHistory': 'Historial',
+    'urlControls': 'Controles de URL',
+    'clearUrl': 'Limpiar URL',
+    'toggleRaw': 'Mostrar/ocultar JSON raw',
+    'rawCsv': 'CSV en crudo',
+    'separator': 'Separador:',
+    'download': 'Descargar',
+    'fontSize': 'Tamaño de fuente',
+    'selectJsonOption': '-- Seleccionar JSON --',
+    'languageEnglishDefault': 'Inglés (predeterminado)',
+    'languageSpanish': 'Español',
+    'selectLanguageOption': '-- Seleccionar idioma --',
+    'themePresetPlaceholder': '-- Seleccionar tema --',
+    'selectJson': '-- Seleccionar --',
+    'load': 'Cargar',
+    'rename': 'Renombrar',
+    'delete': 'Eliminar',
+    'historySearchPlaceholder': 'Buscar en historial...',
+    'webMobile': 'Vista móvil',
+    'customizeTheme': 'Personalizar tema',
+    'background': 'Fondo',
+    'text': 'Texto',
+    'headerCells': 'Encabezados',
+    'typography': 'Tipografía',
+    'evenCells': 'Filas pares',
+    'oddCells': 'Filas impares',
+    'default': 'Predeterminado',
+    'editModeActive': 'Modo edición activo',
+    'clearFilter': 'Limpiar filtro',
+    'filterColumn': 'Filtrar columna',
+    'noResults': 'No se encontraron resultados',
+    'tableCopied': 'Tabla copiada al portapapeles',
+    'sortColumnAsc': 'Ordenar columna ascendente',
+    'sortColumnDesc': 'Ordenar columna descendente',
+    'sortColumnDefault': 'Ordenar columna',
+    'historyCount': '{current} de {total} (máx. {limit})',
+    'historyNoMatches': 'No se encontraron coincidencias en el historial',
+    'historySizeExceeded': 'El JSON es demasiado grande para guardar en el historial',
+    'lastJsonSizeExceeded': 'El JSON es demasiado grande para guardarlo localmente',
+    'loadJsonFromHistory': '¿Cargar JSON desde el historial?',
+    'newName': 'Nuevo nombre',
+    'selectItemToDelete': 'Selecciona un elemento para eliminar',
+    'deleteFromHistory': '¿Eliminar del historial?',
+    'resetThemeConfirm': '¿Restablecer tema personalizado?',
+    'loading': 'Cargando...',
+    'urlPlaceholder': 'Pega URL aquí...',
+    'jsonPlaceholder': 'Pega o escribe JSON aquí',
+    'themePresets': 'Temas guardados',
+    'noThemePresets': 'No hay temas guardados',
+    'loadThemePreset': 'Cargar tema',
+    'renameThemePreset': 'Renombrar tema',
+    'deleteThemePreset': 'Eliminar tema',
+    'saveTheme': 'Guardar tema',
+    'toggleEdit': 'Habilitar/deshabilitar edición',
+    'openConfiguration': 'Abrir configuración',
+    'closeConfiguration': 'Cerrar configuración',
+    'lightMode': 'Modo claro',
+    'darkMode': 'Modo oscuro',
+    'languageEnglishDefault': 'Inglés (predeterminado)',
+    'languageSpanish': 'Español'
+  },
+  en: {
+    // Main interface
+    'appTitle': 'JSON to Table',
+    'loadUrl': 'Load URL',
+    
+    // Giant mode
+    'enableGiantMode': 'Enable giant mode (better performance for large tables)',
+    'disableGiantMode': 'Disable giant mode',
+    'giantModeEnabled': 'Giant mode enabled. Data will be shown in chunks for better performance.',
+    'giantModeDisabled': 'Giant mode disabled. All data will be shown at once.',
+    
+    'edit': '✏️',
+    'save': '💾',
+    'cancel': 'Cancel',
+    'clearJson': 'Clear JSON',
+    'showRaw': 'View JSON',
+    'copyTable': 'Copy table',
+    'globalFilter': 'Filter...',
+    'configuration': 'Settings',
+    'customTheme': 'Custom Theme',
+    'language': 'Language',
+    'jsonHistory': 'History',
+    'urlControls': 'URL controls',
+    'clearUrl': 'Clear URL',
+    'toggleRaw': 'Show/Hide raw JSON',
+    'rawCsv': 'Raw CSV',
+    'separator': 'Separator:',
+    'download': 'Download',
+    'fontSize': 'Font size',
+    'selectJsonOption': '-- Select JSON --',
+    'languageEnglishDefault': 'English (default)',
+    'languageSpanish': 'Spanish',
+    'selectLanguageOption': '-- Select language --',
+    'themePresetPlaceholder': '-- Select theme --',
+    'selectJson': '-- Select --',
+    'load': 'Load',
+    'rename': 'Rename',
+    'delete': 'Delete',
+    'historySearchPlaceholder': 'Search history...',
+    'webMobile': 'Mobile view',
+    'customizeTheme': 'Customize theme',
+    'background': 'Background',
+    'text': 'Text',
+    'headerCells': 'Headers',
+    'typography': 'Typography',
+    'evenCells': 'Even rows',
+    'oddCells': 'Odd rows',
+    'default': 'Default',
+    'editModeActive': 'Edit mode active',
+    'clearFilter': 'Clear filter',
+    'filterColumn': 'Filter column',
+    'noResults': 'No results found',
+    'tableCopied': 'Table copied to clipboard',
+    'sortColumnAsc': 'Sort column ascending',
+    'sortColumnDesc': 'Sort column descending',
+    'sortColumnDefault': 'Sort column',
+    'historyCount': '{current} of {total} (max {limit})',
+    'historyNoMatches': 'No matches found in history',
+    'historySizeExceeded': 'JSON is too large to save in history',
+    'lastJsonSizeExceeded': 'JSON is too large to save locally',
+    'loadJsonFromHistory': 'Load JSON from history?',
+    'newName': 'New name',
+    'selectItemToDelete': 'Select an item to delete',
+    'deleteFromHistory': 'Delete from history?',
+    'resetThemeConfirm': 'Reset custom theme?',
+    'loading': 'Loading...',
+    'urlPlaceholder': 'Paste URL here...',
+    'jsonPlaceholder': 'Paste or type JSON here',
+    'themePresets': 'Saved themes',
+    'noThemePresets': 'No saved themes',
+    'loadThemePreset': 'Load theme',
+    'renameThemePreset': 'Rename theme',
+    'deleteThemePreset': 'Delete theme',
+    'saveTheme': 'Save theme',
+    'toggleEdit': 'Enable/disable editing',
+    'openConfiguration': 'Open settings',
+    'closeConfiguration': 'Close settings',
+    'lightMode': 'Light mode',
+    'darkMode': 'Dark mode',
+    'languageEnglishDefault': 'English (default)',
+    'languageSpanish': 'Spanish'
+  }
+};
+
+// Función de traducción unificada
+function t(key, params = {}) {
+  const lang = state?.currentLanguage || 'es';
+  
+  // Obtener la traducción o la clave si no existe
+  let text = translations[lang]?.[key] || 
+             translations['en'][key] || 
+             key;
+  
+  // Reemplazar parámetros si los hay
+  if (Object.keys(params).length > 0) {
+    text = Object.entries(params).reduce(
+      (result, [param, value]) => 
+        result.replace(new RegExp(`{{${param}}}`, 'g'), String(value)),
+      text
+    );
+  }
+  
+  return text;
+}
+
+function verifyTranslations() {
+  const missing = new Map();
+  const languages = Object.keys(translations);
+
+  const attributeSelectors = [
+    '[data-i18n]',
+    '[data-i18n-placeholder]',
+    '[data-i18n-title]',
+    '[data-i18n-aria-label]'
+  ];
+
+  attributeSelectors.forEach(selector => {
+    document.querySelectorAll(selector).forEach(node => {
+      const attrs = Array.from(node.attributes).filter(attr => attr.name.startsWith('data-i18n'));
+      attrs.forEach(attr => {
+        const key = attr.value;
+        languages.forEach(lang => {
+          if (!translations[lang] || translations[lang][key] === undefined) {
+            if (!missing.has(key)) missing.set(key, new Set());
+            missing.get(key).add(lang);
+          }
+        });
+      });
+    });
+  });
+
+  if (missing.size > 0) {
+    console.warn('[i18n] Claves sin traducción:', Array.from(missing.entries()).map(([key, langs]) => ({ key, languages: Array.from(langs) })));
+  }
+}
+
+// Configuración de internacionalización
+const i18nConfig = {
+  defaultLanguage: 'es',
+  supportedLanguages: ['es', 'en'],
+  
+  // Función para cambiar de idioma
+  changeLanguage: function(lang) {
+    if (this.supportedLanguages.includes(lang)) {
+      i18n.setLanguage(lang);
+      
+      // Actualizar la interfaz
+      updateUITexts();
+      
+      // Guardar preferencia
+      localStorage.setItem('preferredLanguage', lang);
+      
+      return true;
+    }
+    return false;
+  },
+  
+  // Inicializar internacionalización
+  init: function() {
+    // Cargar idioma guardado o detectar del navegador
+    const savedLang = localStorage.getItem('preferredLanguage');
+    const browserLang = (navigator.language || 'en').split('-')[0];
+    const langToUse = savedLang || (this.supportedLanguages.includes(browserLang) ? browserLang : this.defaultLanguage);
+    
+    this.changeLanguage(langToUse);
+    
+    // Escuchar cambios en las preferencias de idioma del sistema
+    window.addEventListener('languagechange', () => {
+      const newLang = (navigator.language || 'en').split('-')[0];
+      if (this.supportedLanguages.includes(newLang) && !localStorage.getItem('preferredLanguage')) {
+        this.changeLanguage(newLang);
+      }
+    });
+  }
+};
+
+// Función de inicialización principal
+async function initializeApp() {
+  // Inicializar internacionalización
+  if (typeof i18n !== 'undefined' && typeof i18nConfig !== 'undefined') {
+    try {
+      i18nConfig.init();
+    } catch (e) {
+      console.warn('Error al inicializar i18n:', e);
+      // Establecer un idioma predeterminado si falla la inicialización
+      state.currentLanguage = 'es';
+    }
+  } else {
+    // Si i18n no está disponible, usar el idioma del navegador
+    const browserLang = (navigator.language || 'es').split('-')[0];
+    state.currentLanguage = ['es', 'en'].includes(browserLang) ? browserLang : 'es';
+  }
+  
+  try {
+    // Sincronizar con el idioma establecido por i18nConfig.init()
+    const savedLang = (typeof localStorage !== 'undefined' && localStorage.getItem('preferredLanguage'))
+      || state.currentLanguage
+      || (typeof i18n !== 'undefined' && typeof i18n.getCurrentLanguage === 'function' ? i18n.getCurrentLanguage() : null)
+      || 'es';
+    state.currentLanguage = savedLang;
+    if (el.languageSelect) el.languageSelect.value = savedLang;
+
+    if (typeof changeLanguage === 'function') {
+      changeLanguage(savedLang);
+    } else if (typeof i18n !== 'undefined' && typeof i18n.setLanguage === 'function') {
+      i18n.setLanguage(savedLang);
+    }
+
+    // Cargar tema
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+      document.body.classList.add('dark');
+    } else {
+      document.body.classList.remove('dark');
+    }
+
+    // Cargar configuraciones adicionales
+    loadCustomTheme();
+    updateRowHeight();
+    loadHistory();
+    loadColumnFilters();
+
+    // Cargar último JSON si existe
+    const last = localStorage.getItem('lastJson');
+    if (last && last.trim()) { 
+      el.jsonin.value = last; 
+      state.lastParsedFull = tryParseJson(last); 
+      await parseJsonInput(false); 
+    } else { 
+      updateActionButtons(); 
+    }
+
+    // Actualizar estado de la interfaz
+    updateFetchButtonState();
+
+    // Configurar modo móvil
+    const mobile = localStorage.getItem('mobileMode') === 'true';
+    enableMobileMode(mobile);
+    
+    // Inicializar botones de limpieza
+    initClearButtons();
+    
+    // Renderizar la tabla si hay datos
+    if (state.currentRows && state.currentRows.length > 0) {
+      renderTable();
+    }
+    
+  } catch (error) {
+    console.error('Error durante la inicialización:', error);
+  }
+}
+
+// Función para manejar el evento de scroll y el renderizado virtual
+function handleScroll() {
+  if (state.isScrolling) return;
+  
+  state.isScrolling = true;
+  requestAnimationFrame(() => {
+    renderTable();
+    state.isScrolling = false;
+  });
+}
+
+// Función para inicializar el scroll infinito
+function initInfiniteScroll() {
+  if (el.tableWrap) {
+    el.tableWrap.addEventListener('scroll', handleScroll, { passive: true });
+  }
+  
+  // El modo de alto rendimiento ahora es automático basado en el tamaño de los datos
+}
+
+// Inicializar la aplicación cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', () => {
+  initializeApp();
+  initInfiniteScroll();
+});
+
+// Las traducciones ahora están en i18n.js
+
+// Inicializar el estado
+const state = {
+  // Datos y filtrado
+  data: [],
+  filteredData: [],
+  filters: {},
+  filterCache: {},
+  lastFilterSignature: null,
+  
+  // Ordenamiento
+  sortColumn: null,
+  sortDirection: 'asc',
+  sortState: {},
+  
+  // Paginación
+  currentPage: 1,
+  rowsPerPage: 50,
+  selectedRows: [],
+  
+  // Historial
+  history: [],
+  historyFilter: '',
+  selectedHistoryIndex: null,
+  
+  // Edición
+  editMode: false,
+  editing: false,
+  editedCells: new Set(),
+  
+  // Configuración
+  language: 'es',
+  selectedLanguage: null,
+  theme: 'light',
+  customTheme: null,
+  mobileMode: window.innerWidth < 768,
+  giantMode: false, // Modo gigante para conjuntos de datos muy grandes
+  
+  // Datos originales
+  originalParsed: null,
+  originalRows: [],
+  currentRows: [],
+  currentHeaders: [],
+  
+  // UI y renderizado
+  lastJson: null,
+  lastJsonSize: 0,
+  virtualStart: 0,
+  visibleCount: 0, // Número de filas visibles en el viewport
+  chunkSize: 200, // Tamaño del chunk para renderizado por partes
+  renderedChunks: new Set(), // Chunks ya renderizados
+  isScrolling: false, // Flag para controlar el evento de scroll
+  scrollDebounce: null, // Referencia al timeout del debounce del scroll
+  lastRenderTime: 0, // Último tiempo de renderizado
+  minRenderInterval: 100, // Tiempo mínimo entre renders (ms)
+  rowHeight: 32, // Altura de cada fila en píxeles (se calcula dinámicamente)
+  
+  // Cache para filtros y ordenamiento
+  cache: {
+    filteredRows: null,
+    filterSignature: null,
+    sortedRows: null,
+    sortSignature: null
+  },
+
+  // Temas personalizados
+  themePresets: [],
+  selectedThemePreset: ''
+};
+
+// Elementos del DOM
 const el = {
   urlIn: document.getElementById('urlIn'),
   urlClearBtn: document.getElementById('urlClearBtn'),
@@ -1027,6 +2573,7 @@ const el = {
   tableWrap: document.getElementById('tableWrap'),
   rawDisplay: document.getElementById('rawDisplay'),
   drawer: document.getElementById('drawer'),
+  drawerOverlay: document.getElementById('drawerOverlay'),
   tabConfig: document.getElementById('tabConfig'),
   tabCustom: document.getElementById('tabCustom'),
   configContent: document.getElementById('configContent'),
@@ -1034,48 +2581,61 @@ const el = {
   themeLight: document.getElementById('themeLight'),
   themeDark: document.getElementById('themeDark'),
   languageSelect: document.getElementById('languageSelect'),
-  jsonHistorySelect: document.getElementById('jsonHistorySelect'),
-  loadHistoryBtn: document.getElementById('loadHistoryBtn'),
-  deleteHistoryBtn: document.getElementById('deleteHistoryBtn'),
-  renameHistoryBtn: document.getElementById('renameHistoryBtn'),
+  languageToggle: document.getElementById('languageToggle'),
+  languageDropdown: document.getElementById('languageDropdown'),
+  languageList: document.getElementById('languageList'),
+  languageSelected: document.getElementById('languageSelected'),
+  jsonHistoryToggle: document.getElementById('jsonHistoryToggle'),
+  jsonHistoryDropdown: document.getElementById('jsonHistoryDropdown'),
+  jsonHistoryList: document.getElementById('jsonHistoryList'),
+  jsonHistorySelected: document.getElementById('jsonHistorySelected'),
   historySearchInput: document.getElementById('historySearchInput'),
   historyMeta: document.getElementById('historyMeta'),
   liveRegion: document.getElementById('liveRegion'),
+  customSaveBtn: document.getElementById('customSaveBtn'),
+  themePresetList: document.getElementById('themePresetList'),
+  themePresetMeta: document.getElementById('themePresetMeta'),
+  themePresetToggle: document.getElementById('themePresetToggle'),
+  themePresetDropdown: document.getElementById('themePresetDropdown'),
+  themePresetSelected: document.getElementById('themePresetSelected'),
   mobileSwitchBtn: document.getElementById('mobileSwitchBtn'),
   bgColor: document.getElementById('bgColor'),
   textColor: document.getElementById('textColor'),
+  headerColor: document.getElementById('headerColor'),
   fontFamily: document.getElementById('fontFamily'),
   cellEven: document.getElementById('cellEven'),
   cellOdd: document.getElementById('cellOdd'),
+  fontSize: document.getElementById('fontSize'),
   customDefaultBtn: document.getElementById('customDefaultBtn'),
   filterEditRow: document.getElementById('filterEditRow'),
-  drawerCloseBtn: document.getElementById('drawerCloseBtn')
+  drawerCloseBtn: document.getElementById('drawerCloseBtn'),
+  editBtnText: document.getElementById('editBtnText')
 };
 
-const state = {
-  originalParsed: null,
-  originalRows: [],
-  currentRows: [],
-  currentHeaders: [],
-  sortState: {},
-  editing: false,
-  columnFilters: {},
-  history: [],
-  historyFilter: '',
-  mobileMode: false,
-  virtualStart: 0,
-  rowHeight: 32,
+const storedPreferredLanguage = (() => {
+  const hasWindow = typeof window !== 'undefined';
+  const hasLocalStorage = hasWindow && typeof localStorage !== 'undefined';
+  const saved = hasLocalStorage ? localStorage.getItem('preferredLanguage') : null;
+  if (saved) return saved;
+  if (typeof i18n !== 'undefined' && typeof i18n.getCurrentLanguage === 'function') {
+    return i18n.getCurrentLanguage();
+  }
+  return null;
+})();
+
+// Estado ya inicializado arriba
+Object.assign(state, {
   visibleCount: 0,
   filterDebounceMs: 200,
   lastParsedFull: null,
-  currentLanguage: 'en',
+  currentLanguage: storedPreferredLanguage || 'es',
   cache: {
     filteredRows: null,
     filterSignature: '',
     headerKeys: null,
     dataVersion: 0
   }
-};
+});
 
 const MAX_LAST_JSON_SIZE = 2_000_000;
 const HISTORY_MAX_JSON_SIZE = 250_000;
@@ -1083,7 +2643,16 @@ const HISTORY_MAX_ENTRIES = 100;
 const HISTORY_DISPLAY_LIMIT = 50;
 const JSON_INDENT = 2;
 
+// Función para actualizar la altura de fila basada en el tamaño de fuente
+function updateRowHeight() {
+  let fontSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 14;
+  if(fontSize < 5) fontSize = 5; // Limitar tamaño mínimo a 5px
+  state.rowHeight = Math.ceil(fontSize * 1.4); // Factor reducido para altura de fila
+  document.documentElement.style.setProperty('--row-height', state.rowHeight + 'px');
+}
+
 let announceTimer = null;
+let editedCellSet = new Set();
 
 const validators = {
   isValidUrl(value){
@@ -1296,24 +2865,64 @@ function escapeAttribute(s){
   return (s||'').replace(/"/g,'&quot;'); 
 }
 
-function formatMessage(template, data){
-  if(!template) return '';
-  return Object.entries(data || {}).reduce((acc, [key, value])=>{
-    const safeValue = value == null ? '' : String(value);
-    return acc.replace(new RegExp(`\\{${key}\\}`, 'g'), safeValue);
+function formatMessage(template, data) {
+  if (!template) return '';
+  return Object.entries(data || {}).reduce((acc, [key, value]) => {
+    return acc.replace(new RegExp(`{{${key}}}`, 'g'), String(value));
   }, template);
 }
 
-function t(key){
-  return translations[state.currentLanguage][key] || key;
+// v1.2.20 – helper local para escapar cadenas en RegExp
+function escapeRegExp(str) {
+  return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function applyDataTranslations(){
+// v1.2.1 – soporte de números regionales en la tabla
+function isNumericLike(value) {
+  if (value === null || value === undefined) return false;
+  if (typeof value === 'number') return Number.isFinite(value);
+  if (typeof value !== 'string') return false;
+
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+
+  const normalized = trimmed.replace(/\s/g, '').replace(',', '.');
+  return !Number.isNaN(Number(normalized));
+}
+
+function formatNumber(value) {
+  const locale = state.currentLanguage === 'es' ? 'es-AR' : 'en-US';
+
+  if (typeof value === 'number') {
+    return new Intl.NumberFormat(locale, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 10,
+      useGrouping: true
+    }).format(value);
+  }
+
+  const normalized = String(value).replace(',', '.');
+  const parsed = Number(normalized);
+  if (Number.isNaN(parsed)) return value;
+
+  const hasDecimal = normalized.includes('.');
+
+  return new Intl.NumberFormat(locale, {
+    minimumFractionDigits: hasDecimal ? 2 : 0,
+    maximumFractionDigits: 10,
+    useGrouping: true
+  }).format(parsed);
+}
+
+function applyDataTranslations() {
+  // Actualizar textos con data-i18n
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
-    if(!key) return;
+    if (!key) return;
     const text = t(key);
-    if(text !== undefined) el.textContent = text;
+    if (text !== undefined && text !== key) {
+      el.textContent = text;
+    }
   });
 
   const attrMap = [
@@ -1343,50 +2952,130 @@ function clearAllFilters(){
   if(el.filterGlobalClearBtn){
     el.filterGlobalClearBtn.style.display = 'none';
   }
+  try {
+    localStorage.removeItem('globalFilter');
+  } catch (e) {
+    console.warn('No se pudo limpiar el filtro global persistido:', e);
+  }
   invalidateFilterCache();
   updateClearButtons();
 }
 
 function updateUITexts(){
+    // Función auxiliar para actualizar texto de un elemento por ID
     function updateElementText(id, text) {
-    const element = document.getElementById(id);
-    if (element) {
-      element.textContent = text;
-    } else {
-      console.warn(`Elemento con ID '${id}' no encontrado`);
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = text;
+        } else if (id) { // Solo mostrar advertencia si el ID no está vacío
+            console.warn(`Elemento con ID '${id}' no encontrado`);
+        }
     }
-  }
 
+    // 1. Aplicar traducciones a elementos con atributos data-i18n
     applyDataTranslations();
 
-    if (el.clearBtn) el.clearBtn.textContent = t('clearJson');
-  updateElementText('separatorLabel', t('separator'));
-  updateElementText('downloadOption', t('download'));
-  if (el.toggleRawBtn) el.toggleRawBtn.textContent = t('showRaw');
-  if (el.copyBtn) el.copyBtn.textContent = t('copyTable');
-  if (el.filterGlobal) el.filterGlobal.placeholder = t('globalFilter');
-  updateElementText('editBtnText', state.editing ? t('save') : t('edit'));
+    // 2. Actualizar textos de elementos específicos
+    const translations = {
+        // Botones principales
+        'clearJson': { element: el.clearBtn },
+        'showRaw': { element: el.toggleRawBtn },
+        'copyTable': { element: el.copyBtn },
+        'edit': { element: el.editBtn, condition: !state.editing },
+        'save': { element: el.editBtn, condition: state.editing },
+        
+        // Campos de formulario
+        'globalFilter': { element: el.filterGlobal, attr: 'placeholder' },
+        'historySearchPlaceholder': { element: el.historySearchInput, attr: 'placeholder' },
+        
+        // Pestañas y secciones
+        'configuration': { id: 'tabConfigText' },
+        'customTheme': { id: 'tabCustomText' },
+        'language': { id: 'languageLabel' },
+        'selectLanguageOption': { id: 'languageSelected' },
+        'jsonHistory': { id: 'historyLabel' },
+        'load': { id: 'loadHistoryText' },
+        'rename': { id: 'renameHistoryText' },
+        'delete': { id: 'deleteHistoryText' },
+        'webMobile': { id: 'mobileSwitchText' },
+        'separator': { id: 'separatorLabel' },
+        'download': { id: 'downloadOption' },
+        
+        // Tema personalizado
+        'customizeTheme': { id: 'customThemeTitle' },
+        'background': { id: 'bgColorLabel' },
+        'text': { id: 'textColorLabel' },
+        'headerCells': { id: 'headerColorLabel' },
+        'typography': { id: 'fontFamilyLabel' },
+        'evenCells': { id: 'cellEvenLabel' },
+        'oddCells': { id: 'cellOddLabel' },
+        'default': { id: 'customDefaultText' }
+    };
 
-    updateElementText('tabConfigText', t('configuration'));
-  updateElementText('tabCustomText', t('customTheme'));
-  updateElementText('languageLabel', t('language'));
-  updateElementText('historyLabel', t('jsonHistory'));
-  updateElementText('selectJsonOption', t('selectJson'));
-  updateElementText('loadHistoryText', t('load'));
-  updateElementText('renameHistoryText', t('rename'));
-  updateElementText('deleteHistoryText', t('delete'));
-  if (el.historySearchInput) el.historySearchInput.placeholder = t('historySearchPlaceholder');
-  updateElementText('mobileSwitchText', t('webMobile'));
+    // Aplicar traducciones
+    Object.entries(translations).forEach(([key, { element, id, attr, condition }]) => {
+        if (condition === false) return;
+        
+        const text = t(key);
+        if (text === undefined) return;
+        
+        if (element) {
+            if (attr) {
+                element[attr] = text;
+            } else {
+                element.textContent = text;
+            }
+        } else if (id) {
+            // Actualizar el texto del interruptor móvil si existe
+  const mobileSwitch = document.getElementById('mobileSwitchText');
+  if (mobileSwitch) {
+    mobileSwitch.textContent = t('webMobile');
+  }
+        }
+    });
 
-    updateElementText('customThemeTitle', t('customizeTheme'));
-  updateElementText('bgColorLabel', t('background'));
-  updateElementText('textColorLabel', t('text'));
-  updateElementText('fontFamilyLabel', t('typography'));
-  updateElementText('cellEvenLabel', t('evenCells'));
-  updateElementText('cellOddLabel', t('oddCells'));
-  updateElementText('customDefaultText', t('default'));
+    if (el.languageSelected && !state.selectedLanguage){
+        el.languageSelected.textContent = t('selectLanguageOption');
+    }
 
+    if (el.jsonHistorySelected && (state.selectedHistoryIndex === null || state.selectedHistoryIndex === '')) {
+        el.jsonHistorySelected.textContent = t('selectJsonOption');
+    }
+
+    if (el.themePresetSelected && !state.selectedThemePreset) {
+        el.themePresetSelected.textContent = t('themePresetPlaceholder');
+    }
+
+    // Eliminar configuración insegura de X-Frame-Options y CSP del meta tag
+    const metaTags = document.getElementsByTagName('meta');
+    for (let i = 0; i < metaTags.length; i++) {
+        const metaTag = metaTags[i];
+        if (metaTag.httpEquiv === 'X-Frame-Options' || metaTag.httpEquiv === 'Content-Security-Policy') {
+            metaTag.remove();
+        }
+    }
+
+    // 3. Actualizar opciones del selector de idioma
+    const languageOptions = {
+        'languageEnglishDefault': 'languageOptionEn',
+        'languageSpanish': 'languageOptionEs'
+    };
+    
+    Object.entries(languageOptions).forEach(([key, id]) => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = t(key);
+        }
+    });
+
+    // 4. Actualizar el historial y la tabla
     renderHistoryDropdown();
+  renderLanguageDropdown();
+    
+    // 5. Forzar actualización de textos en la tabla
+    if (state.currentRows && state.currentRows.length > 0) {
+        renderTable();
+    }
 }
 
 if(el.historySearchInput){
@@ -1397,31 +3086,158 @@ if(el.historySearchInput){
   }, 200));
 }
 
-function changeLanguage(lang) {
-  console.log('Cambiando idioma a:', lang);
-  state.currentLanguage = lang;
-  localStorage.setItem('language', lang);
-
-    if (el.languageSelect) {
-    console.log('Actualizando valor del selector a:', lang);
-    el.languageSelect.value = lang;
-  } else {
-    console.error('el.languageSelect no está definido');
-  }
-
-    console.log('Actualizando textos de la interfaz...');
-  updateUITexts();
-
-  console.log('Volviendo a renderizar la tabla para actualizar etiquetas accesibles...');
-  renderTable();
+function getLanguageLabel(code){
+  const map = {
+    en: t('languageEnglishDefault') || 'English (default)',
+    es: t('languageSpanish') || 'Español'
+  };
+  return map[code] || code;
 }
 
-function saveHistory(){ 
-  try{ 
-    localStorage.setItem('jsonHistory', JSON.stringify(state.history)); 
-  }catch(e){ 
-    console.warn(e); 
-  } 
+function updateLanguageSelectedLabel(code){
+  if(!el.languageSelected) return;
+  
+  if (code && code !== 'selectLanguageOption') {
+    const label = getLanguageLabel(code);
+    el.languageSelected.textContent = label;
+    el.languageSelected.setAttribute('data-i18n', ''); // Eliminar data-i18n para evitar conflictos
+  } else {
+    el.languageSelected.textContent = t('selectLanguageOption');
+    el.languageSelected.setAttribute('data-i18n', 'selectLanguageOption');
+  }
+}
+
+function renderLanguageDropdown(){
+  if(!el.languageList) return;
+
+  const languages = [
+    { code: 'en', label: t('languageEnglishDefault') || 'English (default)' },
+    { code: 'es', label: t('languageSpanish') || 'Español' }
+  ];
+
+  el.languageList.innerHTML = '';
+
+  languages.forEach(lang => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'language-preset-item';
+    item.setAttribute('role', 'option');
+    item.setAttribute('data-lang', lang.code);
+    const isSelected = (state.selectedLanguage || state.currentLanguage) === lang.code;
+    if(isSelected){
+      item.setAttribute('aria-selected', 'true');
+    }
+
+    item.addEventListener('click', ()=>{
+      closeLanguageDropdown();
+      changeLanguage(lang.code);
+    });
+
+    const label = document.createElement('span');
+    label.className = 'language-preset-name';
+    label.textContent = lang.label;
+    item.appendChild(label);
+
+    el.languageList.appendChild(item);
+  });
+}
+
+function openLanguageDropdown(){
+  if(!el.languageDropdown || !el.languageToggle) return;
+  el.languageDropdown.hidden = false;
+  el.languageToggle.setAttribute('aria-expanded', 'true');
+  renderLanguageDropdown();
+}
+
+function closeLanguageDropdown(){
+  if(!el.languageDropdown || !el.languageToggle) return;
+  el.languageDropdown.hidden = true;
+  el.languageToggle.setAttribute('aria-expanded', 'false');
+}
+
+function toggleLanguageDropdown(){
+  if(!el.languageDropdown) return;
+  if(el.languageDropdown.hidden){
+    openLanguageDropdown();
+  } else {
+    closeLanguageDropdown();
+  }
+}
+
+function changeLanguage(lang) {
+  console.log('Iniciando cambio de idioma a:', lang);
+  
+  // Validar que el idioma sea soportado
+  if (!['es', 'en'].includes(lang)) {
+    console.warn(`Idioma no soportado: ${lang}. Usando español por defecto.`);
+    lang = 'es';
+  }
+  
+  // 1. Actualizar el estado y almacenamiento
+  state.currentLanguage = lang;
+  localStorage.setItem('preferredLanguage', lang);
+  state.selectedLanguage = lang;
+  
+  // 2. Actualizar el selector de idioma
+  if (el.languageSelect) {
+    console.log('Actualizando selector de idioma a:', lang);
+    el.languageSelect.value = lang;
+  }
+
+  updateLanguageSelectedLabel(lang);
+  
+  // 3. Actualizar la dirección del documento para idiomas RTL si es necesario
+  document.documentElement.lang = lang;
+  document.documentElement.dir = lang === 'ar' || lang === 'he' ? 'rtl' : 'ltr';
+  
+  // 4. Actualizar todos los textos de la interfaz
+  console.log('Actualizando textos de la interfaz...');
+  updateUITexts();
+  
+  // 5. Actualizar elementos específicos que podrían necesitar atención especial
+  console.log('Actualizando elementos dinámicos...');
+  
+  // Actualizar el título de la página
+  document.title = t('appTitle');
+  
+  // 6. Forzar actualización de la tabla para asegurar que todos los textos se actualicen
+  console.log('Volviendo a renderizar la tabla...');
+  if (state.currentRows && state.currentRows.length > 0) {
+    renderTable();
+  }
+  
+  // 7. Actualizar cualquier otro estado que dependa del idioma
+  if (el.editBtnText) {
+    el.editBtnText.textContent = state.editing ? t('save') : t('edit');
+  }
+  
+  console.log('Cambio de idioma completado a:', lang);
+  
+  // 8. Actualizar elementos con data-i18n
+  applyDataTranslations();
+}
+
+function saveColumnFilters(){
+  try{
+    localStorage.setItem('columnFilters', JSON.stringify(state.columnFilters || {}));
+  }catch(e){
+    console.warn('Error guardando filtros de columna:', e);
+  }
+}
+
+function loadColumnFilters(){
+  try{
+    const raw = localStorage.getItem('columnFilters');
+    if(raw){
+      const parsed = JSON.parse(raw);
+      if(typeof parsed === 'object' && parsed !== null){
+        state.columnFilters = parsed;
+      }
+    }
+  }catch(e){
+    console.warn('Error cargando filtros de columna:', e);
+    state.columnFilters = {};
+  }
 }
 
 function loadHistory(){
@@ -1447,15 +3263,25 @@ function loadHistory(){
 }
 
 function renderHistoryDropdown(){
-  const sel = el.jsonHistorySelect;
-  const filter = (state.historyFilter || '').toLowerCase();
-  let needsSave = false;
+  if(!el.jsonHistoryList || !Array.isArray(state.history)) return;
 
-  const decorated = state.history.map((item, idx)=>{
-    const size = (typeof item.size === 'number')
-      ? item.size
-      : new Blob([item.data || '']).size;
-    if(typeof item.size !== 'number'){
+  const filter = (state.historyFilter || '').toLowerCase();
+  const list = el.jsonHistoryList;
+  list.innerHTML = '';
+
+  let needsSave = false;
+  state.history = state.history.slice(0, HISTORY_MAX_ENTRIES).map((item, idx) => {
+    if (!item.name) {
+      item.name = `JSON ${idx + 1}`;
+      needsSave = true;
+    }
+    return item;
+  });
+  if (needsSave) saveHistory();
+
+  const decorated = state.history.map((item, idx) => {
+    const size = typeof item.size === 'number' ? item.size : new Blob([item.data || '']).size;
+    if (item.size !== size) {
       item.size = size;
       needsSave = true;
     }
@@ -1466,41 +3292,128 @@ function renderHistoryDropdown(){
     return dateB - dateA;
   });
 
-  const filteredAll = decorated.filter(item=>{
-    if(!filter) return true;
-    return (item.name || '').toLowerCase().includes(filter) ||
-           (item.data || '').toLowerCase().includes(filter);
+  const filtered = decorated.filter(item => {
+    if (!filter) return true;
+    return (
+      (item.name || '').toLowerCase().includes(filter) ||
+      (item.data || '').toLowerCase().includes(filter)
+    );
   });
-  const toDisplay = filteredAll.slice(0, HISTORY_DISPLAY_LIMIT);
 
-  sel.innerHTML = `<option value="">${t('selectJson')}</option>`;
+  if(filtered.length === 0){
+    const empty = document.createElement('div');
+    empty.className = 'history-presets-empty';
+    empty.textContent = t('noHistoryItems');
+    list.appendChild(empty);
+    if(el.jsonHistorySelected) el.jsonHistorySelected.textContent = t('selectJsonOption');
+    if(el.historyMeta) el.historyMeta.textContent = t('noHistoryItems');
+    state.selectedHistoryIndex = null;
+    return;
+  }
 
-  toDisplay.forEach((it)=>{
-    const opt = document.createElement('option');
-    opt.value = it.idx;
-    const name = it.name || `JSON ${Number(it.idx)+1}`;
-    const dateStr = it.date ? new Date(it.date).toLocaleString() : '';
-    const sizeStr = formatBytes(it.size);
-    const metaParts = [];
-    if(dateStr) metaParts.push(dateStr);
-    metaParts.push(sizeStr);
-    opt.textContent = metaParts.length ? `${name} (${metaParts.join(' • ')})` : name;
-    sel.appendChild(opt);
+  filtered.forEach(item => {
+    const entry = document.createElement('div');
+    entry.className = 'history-preset-item';
+    entry.setAttribute('role', 'option');
+    entry.setAttribute('data-index', item.idx);
+
+    const nameBtn = document.createElement('button');
+    nameBtn.type = 'button';
+    nameBtn.className = 'history-preset-name';
+    const dateStr = item.date ? new Date(item.date).toLocaleString() : '';
+    const sizeStr = formatBytes(item.size);
+    const baseName = item.name || `JSON ${item.idx + 1}`;
+    nameBtn.textContent = dateStr ? `${baseName} (${dateStr} • ${sizeStr})` : `${baseName} (${sizeStr})`;
+    nameBtn.addEventListener('click', () => {
+      state.selectedHistoryIndex = item.idx;
+      if(el.jsonHistorySelected) el.jsonHistorySelected.textContent = baseName;
+      loadHistoryItem(item.idx);
+      closeHistoryDropdown();
+    });
+
+    const actions = document.createElement('div');
+    actions.className = 'history-inline-actions';
+
+    const renameBtn = document.createElement('button');
+    renameBtn.type = 'button';
+    renameBtn.className = 'history-inline-btn history-inline-rename';
+    renameBtn.innerHTML = '<span aria-hidden="true">✏️</span>';
+    renameBtn.setAttribute('aria-label', t('rename'));
+    renameBtn.addEventListener('click', () => {
+      closeHistoryDropdown();
+      renameHistoryItem(item.idx);
+    });
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.type = 'button';
+    deleteBtn.className = 'history-inline-btn history-inline-delete';
+    deleteBtn.innerHTML = '<span aria-hidden="true">🗑️</span>';
+    deleteBtn.setAttribute('aria-label', t('delete'));
+    deleteBtn.addEventListener('click', () => {
+      closeHistoryDropdown();
+      deleteHistoryItem(item.idx);
+    });
+
+    actions.appendChild(renameBtn);
+    actions.appendChild(deleteBtn);
+    entry.appendChild(nameBtn);
+    entry.appendChild(actions);
+    list.appendChild(entry);
   });
 
   if(el.historyMeta){
-    if(!filteredAll.length){
-      el.historyMeta.textContent = t('historyNoMatches');
-    } else {
-      const text = t('historyCount')
-        .replace('{current}', toDisplay.length)
-        .replace('{total}', filteredAll.length)
-        .replace('{limit}', HISTORY_DISPLAY_LIMIT);
-      el.historyMeta.textContent = text;
-    }
+    el.historyMeta.textContent = formatMessage(t('historyMeta'), { count: filtered.length });
   }
 
   if(needsSave) saveHistory();
+}
+
+function openHistoryDropdown(){
+  if(!el.jsonHistoryDropdown || !el.jsonHistoryToggle) return;
+  el.jsonHistoryDropdown.hidden = false;
+  el.jsonHistoryToggle.setAttribute('aria-expanded', 'true');
+}
+
+function closeHistoryDropdown(){
+  if(!el.jsonHistoryDropdown || !el.jsonHistoryToggle) return;
+  el.jsonHistoryDropdown.hidden = true;
+  el.jsonHistoryToggle.setAttribute('aria-expanded', 'false');
+}
+
+function toggleHistoryDropdown(){
+  if(!el.jsonHistoryDropdown || !el.jsonHistoryToggle) return;
+  const isOpen = el.jsonHistoryToggle.getAttribute('aria-expanded') === 'true';
+  isOpen ? closeHistoryDropdown() : openHistoryDropdown();
+}
+
+function loadHistoryItem(index){
+  const item = state.history[index];
+  if(!item) return;
+  el.jsonin.value = item.data;
+  el.jsonin.dispatchEvent(new Event('input', { bubbles: true }));
+  state.lastJson = item.data;
+  announce('jsonLoaded');
+}
+
+function renameHistoryItem(index){
+  const item = state.history[index];
+  if(!item) return alert(t('selectJsonFromHistory'));
+  const newName = prompt(t('newName'), item.name || '');
+  if(newName){
+    item.name = newName;
+    saveHistory();
+    renderHistoryDropdown();
+  }
+}
+
+function deleteHistoryItem(index){
+  const item = state.history[index];
+  if(!item) return alert(t('selectItemToDelete'));
+  if(!confirm(t('deleteFromHistory'))) return;
+  state.history.splice(index, 1);
+  saveHistory();
+  renderHistoryDropdown();
+  if(el.jsonHistorySelected) el.jsonHistorySelected.textContent = t('selectJsonOption');
 }
 
 function formatBytes(bytes){
@@ -1516,6 +3429,14 @@ async function sha1(str){
   const enc = new TextEncoder();
   const buf = await crypto.subtle.digest('SHA-1', enc.encode(str));
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+function saveHistory(){ 
+  try{ 
+    localStorage.setItem('jsonHistory', JSON.stringify(state.history)); 
+  }catch(e){ 
+    console.warn(e); 
+  } 
 }
 
 async function addToHistory(jsonStr, name){
@@ -1546,26 +3467,61 @@ function updateLastJsonStorage(text){
     console.warn('No se pudo guardar lastJson');
   }
 }
-function updateActionButtons(){
+function updateActionButtons() {
   const hasData = state.currentRows && state.currentRows.length > 0;
+  const hasJsonInput = el.jsonin.value.trim().length > 0;
+  const hasValidTable = hasData && !el.jsonin.classList.contains('error');
 
-    el.downloadSelect.disabled = !hasData;
-  el.toggleRawBtn.disabled = !hasData;
-  el.copyBtn.disabled = !hasData;
-  el.editBtn.disabled = !hasData;
-  el.filterGlobal.disabled = !hasData;
+  // Elementos que requieren datos válidos para estar habilitados
+  const actionElements = [
+    el.downloadSelect,
+    el.toggleRawBtn,
+    el.copyBtn,
+    el.editBtn,
+    el.filterGlobal
+  ];
 
-    el.clearBtn.disabled = !el.jsonin.value.trim();
+  // Actualizar estado de los elementos de acción
+  actionElements.forEach(element => {
+    if (element) {
+      element.disabled = !hasValidTable;
+      // Si el elemento tiene un contenedor padre con clase 'action-container', lo mostramos/ocultamos
+      const container = element.closest('.action-container');
+      if (container) {
+        container.style.display = hasValidTable ? '' : 'none';
+      }
+    }
+  });
 
-    el.deleteHistoryBtn.disabled = el.jsonHistorySelect.value === '';
-  el.loadHistoryBtn.disabled = el.jsonHistorySelect.value === '';
+  // Botón de limpiar solo necesita que haya texto en el área de JSON
+  if (el.clearBtn) {
+    el.clearBtn.disabled = !hasJsonInput;
+  }
 
-    if(hasData){
-    el.filterEditRow.classList.remove('hide-without-data');
-    el.filterEditRow.classList.add('show-with-data');
-  } else {
-    el.filterEditRow.classList.add('hide-without-data');
-    el.filterEditRow.classList.remove('show-with-data');
+  // Botones de historial
+  // Botones de historial gestionados por acciones inline
+
+  // Actualizar fila de filtro/edición
+  if (el.filterEditRow) {
+    if (hasValidTable) {
+      el.filterEditRow.classList.remove('hide-without-data');
+      el.filterEditRow.classList.add('show-with-data');
+      el.filterEditRow.style.display = ''; // Asegurar que se muestre
+    } else {
+      el.filterEditRow.classList.add('hide-without-data');
+      el.filterEditRow.classList.remove('show-with-data');
+      el.filterEditRow.style.display = 'none'; // Asegurar que se oculte
+    }
+  }
+
+  // Asegurarse de que el botón de edición muestre el texto correcto
+  if (el.editBtn) {
+    el.editBtn.textContent = state.editing ? t('save') : t('edit');
+  }
+
+  // Actualizar visibilidad del botón de limpiar filtro global
+  if (el.filterGlobalClearBtn) {
+    el.filterGlobalClearBtn.style.display = (hasValidTable && el.filterGlobal.value) ? 'block' : 'none';
   }
 }
 
@@ -1590,68 +3546,338 @@ function showCustomTab(){
 function clearCustomTheme(){
   const body = document.body;
   const html = document.documentElement;
-  ['--bg','--fg','--cell-even','--cell-odd','--font-main'].forEach(prop => {
+  ['--bg','--fg','--cell-even','--cell-odd','--header-bg','--font-main','--custom-font-size'].forEach(prop => {
     body.style.removeProperty(prop);
     html.style.removeProperty(prop);
   });
 }
 
 function applyCustomTheme(colors){
-  const target = document.body.classList.contains('dark') ? document.body : document.documentElement;
-  if(colors.bg) target.style.setProperty('--bg', colors.bg);
-  if(colors.text) target.style.setProperty('--fg', colors.text);
-  if(colors.cellEven) target.style.setProperty('--cell-even', colors.cellEven);
-  if(colors.cellOdd) target.style.setProperty('--cell-odd', colors.cellOdd);
-  if(colors.font) { target.style.setProperty('--font-main', colors.font); const fontSelect = document.getElementById('fontFamily'); if(fontSelect) fontSelect.value = colors.font; }
+  const root = document.documentElement;
+  const body = document.body;
+  const targets = [root, body];
+
+  const setVar = (name, value) => {
+    if (value == null) return;
+    targets.forEach(t => t.style.setProperty(name, value));
+  };
+
+  if(colors.bg) setVar('--bg', colors.bg);
+  if(colors.text) setVar('--fg', colors.text);
+  if(colors.header) setVar('--header-bg', colors.header);
+  if(colors.cellEven) setVar('--cell-even', colors.cellEven);
+  if(colors.cellOdd) setVar('--cell-odd', colors.cellOdd);
+
+  if(colors.font){
+    setVar('--font-main', colors.font);
+    const fontSelect = document.getElementById('fontFamily');
+    if(fontSelect) fontSelect.value = colors.font;
+  }
+
+  if(colors.fontSize !== undefined){
+    const fontSizeNum = Number(colors.fontSize);
+    const resolvedSize = isNaN(fontSizeNum) ? 12 : fontSizeNum;
+    const sizeValue = `${resolvedSize}px`;
+    setVar('--custom-font-size', sizeValue);
+    const fontSizeInput = document.getElementById('fontSize');
+    if(fontSizeInput) fontSizeInput.value = resolvedSize;
+  }
+
+  if (typeof updateRowHeight === 'function') {
+    updateRowHeight();
+  }
 }
 
 function loadCustomTheme(){
   try{
-    const raw = localStorage.getItem('customTheme');
     const isDark = document.body.classList.contains('dark');
+    const themeKey = 'customTheme_' + (isDark ? 'dark' : 'light');
+    const raw = localStorage.getItem(themeKey);
     const defaults = isDark ? {
       bg: '#141414',
-      text: '#eee',
+      text: '#EEEEEE',
+      header: '#222222',
       cellEven: '#252525',
-      cellOdd: '#202020'
+      cellOdd: '#202020',
+      font: "'Segoe UI', Tahoma, sans-serif",
+      fontSize: 12
     } : {
       bg: '#ffffff',
       text: '#111111',
+      header: '#f2f2f2',
       cellEven: '#f9f9f9',
-      cellOdd: '#eef3ff'
+      cellOdd: '#eef3ff',
+      font: "'Segoe UI', Tahoma, sans-serif",
+      fontSize: 12
     };
 
-    if(raw){
-      const c = JSON.parse(raw);
-      el.bgColor.value = c.bg || defaults.bg;
-      el.textColor.value = c.text || defaults.text;
-      el.fontFamily.value = c.font || '';
-      el.cellEven.value = c.cellEven || defaults.cellEven;
-      el.cellOdd.value = c.cellOdd || defaults.cellOdd;
-      applyCustomTheme(c);
-    } else {
-      clearCustomTheme();
-      el.bgColor.value = defaults.bg;
-      el.textColor.value = defaults.text;
-      el.fontFamily.value = '';
-      el.cellEven.value = defaults.cellEven;
-      el.cellOdd.value = defaults.cellOdd;
+    const config = raw ? (()=>{
+      try{
+        const parsed = JSON.parse(raw);
+        return {
+          bg: parsed.bg || defaults.bg,
+          text: parsed.text || defaults.text,
+          header: parsed.header || defaults.header,
+          cellEven: parsed.cellEven || defaults.cellEven,
+          cellOdd: parsed.cellOdd || defaults.cellOdd,
+          font: parsed.font || defaults.font,
+          fontSize: Number(parsed.fontSize) || defaults.fontSize
+        };
+      }catch(parseError){
+        console.warn('Error analizando tema personalizado, usando valores por defecto', parseError);
+        return defaults;
+      }
+    })() : defaults;
+
+    populateThemeControls(config);
+    applyCustomTheme(config);
+    saveCustomTheme(config);
+  }catch(e){
+    console.warn(e);
+    applyCustomTheme({ text: '#111111' });
+  }
+  loadThemePresets();
+}
+
+function saveCustomTheme(config){
+  const isDark = document.body.classList.contains('dark');
+  const themeKey = 'customTheme_' + (isDark ? 'dark' : 'light');
+  const c = config || {
+    bg: el.bgColor.value,
+    text: el.textColor.value,
+    header: el.headerColor.value,
+    font: el.fontFamily.value,
+    cellEven: el.cellEven.value,
+    cellOdd: el.cellOdd.value,
+    fontSize: el.fontSize ? Number(el.fontSize.value) || 12 : 12
+  };
+  try {
+    localStorage.setItem(themeKey, JSON.stringify(c));
+  } catch (e) {
+    console.warn('No se pudo guardar el tema personalizado:', e);
+  }
+  applyCustomTheme(c);
+  return c;
+}
+
+function getThemePresetStorageKey(){
+  const mode = document.body.classList.contains('dark') ? 'dark' : 'light';
+  return `themePresets_${mode}`;
+}
+
+function collectThemeConfigFromInputs(){
+  return {
+    bg: el.bgColor ? el.bgColor.value : '#ffffff',
+    text: el.textColor ? el.textColor.value : '#111111',
+    header: el.headerColor ? el.headerColor.value : '#f2f2f2',
+    cellEven: el.cellEven ? el.cellEven.value : '#ffffff',
+    cellOdd: el.cellOdd ? el.cellOdd.value : '#f4f7ff',
+    font: el.fontFamily ? el.fontFamily.value || "'Segoe UI', Tahoma, sans-serif" : "'Segoe UI', Tahoma, sans-serif",
+    fontSize: el.fontSize ? Number(el.fontSize.value) || 12 : 12
+  };
+}
+
+function loadThemePresets(){
+  try {
+    const raw = localStorage.getItem(getThemePresetStorageKey());
+    const parsed = raw ? JSON.parse(raw) : [];
+    state.themePresets = Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    console.warn('Error al cargar temas guardados:', e);
+    state.themePresets = [];
+  }
+  state.selectedThemePreset = '';
+  renderThemePresetDropdown();
+}
+
+function saveThemePresets(list){
+  const data = JSON.stringify(list || []);
+  try {
+    localStorage.setItem(getThemePresetStorageKey(), data);
+  } catch (e) {
+    console.warn('Error al guardar temas guardados:', e);
+  }
+  state.themePresets = Array.isArray(list) ? list : [];
+  renderThemePresetDropdown();
+}
+
+function renderThemePresetDropdown(){
+  if(!el.themePresetList) return;
+  const list = el.themePresetList;
+  list.innerHTML = '';
+
+  const count = state.themePresets.length;
+  if(count === 0){
+    const empty = document.createElement('div');
+    empty.className = 'theme-presets-empty';
+    empty.textContent = t('noThemePresets');
+    list.appendChild(empty);
+    if(el.themePresetMeta){
+      el.themePresetMeta.textContent = t('noThemePresets');
     }
-  }catch(e){ 
-    console.warn(e); 
+    if(el.themePresetSelected){
+      el.themePresetSelected.textContent = t('themePresetPlaceholder');
+    }
+    return;
+  }
+
+  state.themePresets.forEach((preset, index) => {
+    const item = document.createElement('div');
+    item.className = 'theme-preset-item';
+    item.setAttribute('role', 'option');
+    item.setAttribute('data-id', preset.id);
+    item.setAttribute('tabindex', index === 0 ? '0' : '-1');
+
+    const nameBtn = document.createElement('button');
+    nameBtn.type = 'button';
+    nameBtn.className = 'preset-name-btn';
+    nameBtn.textContent = preset.name;
+    nameBtn.title = t('loadThemePresetLabel');
+    nameBtn.addEventListener('click', () => {
+      state.selectedThemePreset = preset.id;
+      applyThemePresetById(preset.id);
+      closeThemePresetDropdown();
+      if(el.themePresetSelected){
+        el.themePresetSelected.textContent = preset.name;
+      }
+    });
+
+    const actions = document.createElement('div');
+    actions.className = 'preset-inline-actions';
+
+    const renameBtn = document.createElement('button');
+    renameBtn.type = 'button';
+    renameBtn.className = 'preset-inline-btn preset-inline-rename';
+    renameBtn.setAttribute('aria-label', t('renameThemePresetLabel'));
+    renameBtn.innerHTML = '<span aria-hidden="true">✏️</span>';
+    renameBtn.addEventListener('click', () => {
+      state.selectedThemePreset = preset.id;
+      const newName = prompt(t('renameThemePrompt'), preset.name);
+      if(newName === null) return;
+      renameThemePresetById(preset.id, newName);
+    });
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.type = 'button';
+    deleteBtn.className = 'preset-inline-btn preset-inline-delete';
+    deleteBtn.setAttribute('aria-label', t('deleteThemePresetLabel'));
+    deleteBtn.innerHTML = '<span aria-hidden="true">🗑️</span>';
+    deleteBtn.addEventListener('click', () => {
+      state.selectedThemePreset = preset.id;
+      if(!confirm(t('confirmDeleteTheme'))) return;
+      deleteThemePresetById(preset.id);
+    });
+
+    actions.appendChild(renameBtn);
+    actions.appendChild(deleteBtn);
+
+    item.appendChild(nameBtn);
+    item.appendChild(actions);
+    list.appendChild(item);
+  });
+
+  if(el.themePresetMeta){
+    el.themePresetMeta.textContent = formatMessage(t('themePresetMeta'), { count });
   }
 }
 
-function saveCustomTheme(){
-  const c = { 
-    bg: el.bgColor.value, 
-    text: el.textColor.value, 
-    font: el.fontFamily.value, 
-    cellEven: el.cellEven.value, 
-    cellOdd: el.cellOdd.value
+function openThemePresetDropdown(){
+  if(!el.themePresetDropdown || !el.themePresetToggle) return;
+  el.themePresetDropdown.hidden = false;
+  el.themePresetToggle.setAttribute('aria-expanded', 'true');
+}
+
+function closeThemePresetDropdown(){
+  if(!el.themePresetDropdown || !el.themePresetToggle) return;
+  el.themePresetDropdown.hidden = true;
+  el.themePresetToggle.setAttribute('aria-expanded', 'false');
+}
+
+function toggleThemePresetDropdown(){
+  if(!el.themePresetDropdown || !el.themePresetToggle) return;
+  const isOpen = el.themePresetToggle.getAttribute('aria-expanded') === 'true';
+  if(isOpen){
+    closeThemePresetDropdown();
+  }else{
+    openThemePresetDropdown();
+  }
+}
+
+function populateThemeControls(config){
+  if(!config) return;
+  if(el.bgColor && config.bg) el.bgColor.value = config.bg;
+  if(el.textColor && config.text) el.textColor.value = config.text;
+  if(el.headerColor && config.header) el.headerColor.value = config.header;
+  if(el.cellEven && config.cellEven) el.cellEven.value = config.cellEven;
+  if(el.cellOdd && config.cellOdd) el.cellOdd.value = config.cellOdd;
+  if(el.fontFamily && config.font) el.fontFamily.value = config.font;
+  if(el.fontSize) el.fontSize.value = config.fontSize != null ? Number(config.fontSize) || 12 : 12;
+}
+
+function saveThemePreset(name){
+  const trimmed = (name || '').trim();
+  if(!trimmed){
+    alert(t('requiredField'));
+    return false;
+  }
+  const list = Array.isArray(state.themePresets) ? [...state.themePresets] : [];
+  const exists = list.some(preset=> (preset.name || '').toLowerCase() === trimmed.toLowerCase());
+  if(exists){
+    alert(t('themePresetExists') || 'Ya existe un tema con ese nombre');
+    return false;
+  }
+  const config = collectThemeConfigFromInputs();
+  const normalizedConfig = JSON.stringify(config);
+  const duplicateConfig = list.some(preset => JSON.stringify(preset.config) === normalizedConfig);
+  if(duplicateConfig){
+    alert(t('themePresetDuplicate') || 'Ya existe un tema con estas opciones');
+    return false;
+  }
+  const preset = {
+    id: `theme-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: trimmed,
+    config: JSON.parse(JSON.stringify(config))
   };
-  localStorage.setItem('customTheme', JSON.stringify(c));
-  applyCustomTheme(c);
+  list.push(preset);
+  state.selectedThemePreset = preset.id;
+  saveThemePresets(list);
+  saveCustomTheme(config);
+  announce('themeSaved');
+  return true;
+}
+
+function applyThemePresetById(id){
+  if(!id) return false;
+  const preset = state.themePresets.find(p => p.id === id);
+  if(!preset) return false;
+  populateThemeControls(preset.config);
+  const stored = saveCustomTheme(preset.config);
+  applyCustomTheme(stored);
+  announce('themeLoaded');
+  return true;
+}
+
+function renameThemePresetById(id, newName){
+  const trimmed = (newName || '').trim();
+  if(!trimmed){
+    alert(t('requiredField'));
+    return false;
+  }
+  const list = state.themePresets.map(preset =>
+    preset.id === id ? { ...preset, name: trimmed } : preset
+  );
+  state.selectedThemePreset = id;
+  saveThemePresets(list);
+  announce('themeRenamed');
+  return true;
+}
+
+function deleteThemePresetById(id){
+  const list = state.themePresets.filter(preset => preset.id !== id);
+  state.selectedThemePreset = '';
+  saveThemePresets(list);
+  announce('themeDeleted');
+  return true;
 }
 
 function enableMobileMode(flag){
@@ -1692,18 +3918,31 @@ function updateFetchButtonState(){
   }
 }
 
-async function parseJsonInput(addToHist){
+async function parseJsonInput(addToHist) {
   const txt = el.jsonin.value || '';
-  if(!txt.trim()){
-    // Limpiar el estado si no hay texto
+  
+  // Función para limpiar el estado cuando no hay texto
+  const clearState = () => {
     state.originalParsed = null;
-    state.originalRows = []; 
-    state.currentRows = []; 
+    state.originalRows = [];
+    state.currentRows = [];
     state.currentHeaders = [];
     invalidateFilterCache();
-    el.tableWrap.innerHTML = '';
-    el.jsonin.classList.remove('error'); // Asegurarse de quitar la clase de error
+    if (el.tableWrap) {
+      el.tableWrap.innerHTML = '';
+    }
+    el.jsonin.classList.remove('error');
+    // Ocultar controles que dependen de tener una tabla
+    if (el.filterEditRow) {
+      el.filterEditRow.style.display = 'none';
+    }
+    // Actualizar estado de los botones
     updateActionButtons();
+  };
+  
+  // Si no hay texto, limpiar el estado y salir
+  if (!txt.trim()) {
+    clearState();
     return;
   }
 
@@ -1712,25 +3951,48 @@ async function parseJsonInput(addToHist){
         el.jsonin.classList.add('error');
     state.originalRows = []; 
     state.currentRows = [];
-    invalidateFilterCache();
-    el.tableWrap.innerHTML = `<div class="table-message table-message--error" role="alert">${t('invalidJson')}</div>`;
-    updateActionButtons();
-    return;
+    try {
+      if (el.tableWrap) {
+        el.tableWrap.innerHTML = `
+          <div class="error-message">
+            <p>Error al mostrar la tabla. Por favor, verifica los datos e inténtalo de nuevo.</p>
+            <button onclick="el.jsonin.focus(); el.jsonin.select();" class="btn">Revisar JSON</button>
+          </div>`;
+      }
+    } catch (error) {
+      console.error('Error al mostrar mensaje de error en renderTable:', error);
+    }
   } else {
     el.jsonin.classList.remove('error');
   }
 
+  try {
     const rows = getRowsFromJson(parsed);
-  state.originalRows = rows;
-  state.currentRows = rows.slice();
-  state.lastParsedFull = parsed;
-  invalidateFilterCache();
+    state.originalRows = rows;
+    state.currentRows = rows.slice();
+    state.lastParsedFull = parsed;
+    invalidateFilterCache();
 
-  if(addToHist) await addToHistory(txt);
-  updateLastJsonStorage(txt);
+    // El modo de alto rendimiento ahora se gestiona automáticamente durante el renderizado
+    // basado en el tamaño de los datos
 
-  if(addToHist){
-    clearAllFilters();
+    if (addToHist) {
+      await addToHistory(txt);
+      clearAllFilters();
+    }
+
+    updateLastJsonStorage(txt);
+  } catch (error) {
+    console.error('Error al procesar el JSON:', error);
+    el.jsonin.classList.add('error');
+    if (el.tableWrap) {
+      el.tableWrap.innerHTML = `
+        <div class="error-message">
+          <p>Error al procesar el JSON: ${error.message}</p>
+          <button onclick="el.jsonin.focus(); el.jsonin.select();" class="btn">Revisar JSON</button>
+        </div>`;
+    }
+    return;
   }
 
   if(el.rawDisplay){
@@ -1742,14 +4004,13 @@ async function parseJsonInput(addToHist){
   if(el.toggleRawBtn){
     el.toggleRawBtn.textContent = t('showRaw');
   }
-  if(el.filterGlobal && el.filterGlobal.parentElement){
-    el.filterGlobal.parentElement.style.display = '';
-  }
-  if(el.filterGlobalClearBtn){
-    el.filterGlobalClearBtn.style.display = el.filterGlobal.value ? 'block' : 'none';
-  }
-  if(el.editBtn){
-    el.editBtn.style.display = '';
+  // Actualizar la visibilidad de los controles según si hay datos válidos
+  const hasValidData = state.currentRows && state.currentRows.length > 0;
+  
+  // El filtro global y el botón de edición se manejarán en updateActionButtons
+  // Solo asegurarse de que el contenedor padre esté configurado correctamente
+  if (el.filterEditRow) {
+    el.filterEditRow.style.display = hasValidData ? '' : 'none';
   }
 
     state.virtualStart = 0;
@@ -1790,6 +4051,87 @@ function announce(key, data){
   }, 0);
 }
 
+let drawerLastFocus = null;
+
+function toggleDrawer(open){
+  if(!el.drawer) return;
+  if(open){
+    drawerLastFocus = document.activeElement;
+    el.drawer.classList.add('open');
+    document.body.classList.add('drawer-open');
+    if(el.drawerOverlay){
+      el.drawerOverlay.classList.add('visible');
+      el.drawerOverlay.setAttribute('aria-hidden','false');
+    }
+    showConfigTab();
+    const focusTarget = el.languageSelect || el.bgColor;
+    if(focusTarget){
+      setTimeout(()=>focusTarget.focus(), 0);
+    }
+  } else {
+    el.drawer.classList.remove('open');
+    document.body.classList.remove('drawer-open');
+    if(el.drawerOverlay){
+      el.drawerOverlay.classList.remove('visible');
+      el.drawerOverlay.setAttribute('aria-hidden','true');
+    }
+    showConfigTab();
+    if(drawerLastFocus && typeof drawerLastFocus.focus === 'function'){
+      setTimeout(()=>drawerLastFocus.focus(), 0);
+    }
+  }
+}
+
+function updateEditBadgeCounter(){
+  const badge = document.getElementById('editModeBadge');
+  const counter = document.getElementById('editModeCount');
+  if(!badge || !counter) return;
+  const count = editedCellSet.size;
+  counter.textContent = String(count);
+  badge.setAttribute('data-count', String(count));
+}
+
+function updateClearButtons(){
+  if(el.urlIn && el.urlClearBtn){
+    el.urlClearBtn.style.display = el.urlIn.value ? 'block' : 'none';
+  }
+  if(el.filterGlobal && el.filterGlobalClearBtn){
+    el.filterGlobalClearBtn.style.display = el.filterGlobal.value ? 'block' : 'none';
+  }
+
+  document.querySelectorAll('.filter-col').forEach(input => {
+    const wrap = input.closest('.filter-col-wrap');
+    if(!wrap) return;
+    const clearBtn = wrap.querySelector('.filter-col-clear') || wrap.querySelector('.clear-btn');
+    if(clearBtn){
+      clearBtn.style.display = input.value ? 'block' : 'none';
+    }
+  });
+}
+
+function initClearButtons(){
+  if(el.urlIn){
+    ['input','focus','blur'].forEach(evt=>{
+      el.urlIn.addEventListener(evt, updateClearButtons);
+    });
+  }
+  if(el.filterGlobal){
+    ['input','focus','blur'].forEach(evt=>{
+      el.filterGlobal.addEventListener(evt, updateClearButtons);
+    });
+    try {
+      const storedGlobal = localStorage.getItem('globalFilter');
+      if (storedGlobal) {
+        el.filterGlobal.value = storedGlobal;
+      }
+    } catch (e) {
+      console.warn('No se pudo cargar el filtro global persistido:', e);
+    }
+  }
+
+  updateClearButtons();
+}
+
 function getSortAriaLabel(columnKey){
   const colName = String(columnKey);
   const sortState = state.sortState[columnKey];
@@ -1804,106 +4146,350 @@ function getSortAriaLabel(columnKey){
   return formatMessage(template || '', { column: colName });
 }
 
-function renderTable(){
-  const rows = state.currentRows || [];
+function resetEditTracking() {
+  editedCellSet.clear();
+  updateEditBadgeCounter();
+}
 
-  if(!rows.length){
-        const keys = state.originalRows.length ? getHeaderKeys(state.originalRows) : [];
+/**
+ * Construye el HTML de una fila de la tabla
+ * @param {Array} keys - Array de claves de las columnas
+ * @param {Object} row - Objeto con los datos de la fila
+ * @param {number} index - Índice de la fila
+ * @returns {string} HTML de la fila
+ */
+function buildTableRow(keys, row, index, globalFilter = '') {
+  try {
+    const normalizedGlobal = (globalFilter || '').toLowerCase();
+    const rowHasMatch = normalizedGlobal ? 
+      Object.values(row).some(v => String(v || '').toLowerCase().includes(normalizedGlobal)) : 
+      false;
+    
+    const rowClass = [];
+    // No aplicar 'global-match' permanente; solo se hará blink tras el render
+    if (index % 2 === 0) rowClass.push('even');
+    
+    let rowHtml = `<tr data-row="${index}" data-index="${index}" class="${rowClass.join(' ')}">`;
+    
+    // Celdas de datos
+    keys.forEach(key => {
+      const cellValue = row[key] !== undefined ? row[key] : '';
 
-    if(!keys.length){
-      el.tableWrap.innerHTML = '';
-      updateActionButtons();
+      let rawValue;
+      if (cellValue === null || cellValue === undefined) {
+        rawValue = '';
+      } else if (typeof cellValue === 'object') {
+        try {
+          rawValue = JSON.stringify(cellValue);
+        } catch (jsonError) {
+          console.warn('No se pudo serializar el valor de la celda', cellValue, jsonError);
+          rawValue = String(cellValue);
+        }
+      } else {
+        rawValue = String(cellValue);
+      }
+
+      const normalizedValue = rawValue.toLowerCase();
+      let displayValue = rawValue;
+      if (!state.editing && isNumericLike(rawValue)) {
+        displayValue = formatNumber(rawValue);
+      }
+
+      let cellContent = escapeHtml(String(displayValue));
+      if (normalizedGlobal && normalizedValue.includes(normalizedGlobal)) {
+        const regex = new RegExp(`(${escapeRegExp(normalizedGlobal)})`, 'gi');
+        cellContent = cellContent.replace(regex, '<mark class="highlight">$1</mark>');
+      }
+      rowHtml += `<td class="editable" data-row="${index}" data-col="${encodeURIComponent(key)}" ` +
+        `tabindex="0" draggable="true">${cellContent}</td>`;
+    });
+
+    // La columna de acciones ha sido eliminada para una interfaz más limpia
+    rowHtml += '</tr>';
+    return rowHtml;
+    
+  } catch (e) {
+    console.error('Error al construir fila de la tabla:', e);
+    return '';
+  }
+}
+
+/**
+ * Renderiza la tabla con scroll infinito y renderizado por chunks
+ * @param {boolean} forceFullRender - Forzar renderizado completo
+ */
+ 
+function blinkCell(cell) {
+  if (!cell) return;
+
+  // Remover cualquier blink previo
+  cell.classList.remove('blink-cell');
+
+  // Forzar reflow para reiniciar la animación si se llama dos veces seguidas
+  void cell.offsetWidth;
+
+  const originalBackground = window.getComputedStyle(cell).getPropertyValue('background-color');
+  cell.style.setProperty('--blink-origin', originalBackground);
+
+  const handleAnimationEnd = () => {
+    cell.classList.remove('blink-cell');
+    cell.style.backgroundColor = originalBackground;
+
+    requestAnimationFrame(() => {
+      cell.style.backgroundColor = '';
+      cell.style.setProperty('--blink-origin', '');
+    });
+
+    cell.removeEventListener('animationend', handleAnimationEnd);
+  };
+
+  cell.addEventListener('animationend', handleAnimationEnd);
+  cell.classList.add('blink-cell');
+}
+
+function blinkMatch(el, className) {
+  const blinkClass = `${className}-blink`;
+  el.classList.add(className);
+  el.classList.add(blinkClass);
+  el.addEventListener(
+    'animationend',
+    () => {
+      // Remover tanto la clase de blink como la base para evitar resaltado permanente
+      el.classList.remove(blinkClass);
+      el.classList.remove(className);
+    },
+    { once: true }
+  );
+}
+
+function renderTable(forceFullRender = false) {
+  try {
+    const now = Date.now();
+    const timeSinceLastRender = now - state.lastRenderTime;
+
+    // Si no ha pasado el tiempo mínimo desde el último render, programar para más tarde
+    if (timeSinceLastRender < state.minRenderInterval && !forceFullRender) {
+      if (state.scrollDebounce) clearTimeout(state.scrollDebounce);
+      state.scrollDebounce = setTimeout(() => renderTable(true), state.minRenderInterval - timeSinceLastRender);
       return;
     }
 
-        const html = buildTableHtml([], keys, true);
-    el.tableWrap.innerHTML = html;
-    attachTableEvents();
-    updateActionButtons();
-    return;
-  }
+    state.lastRenderTime = now;
+    
+    // Definir clearMatches si no está disponible
+    if (typeof clearMatches !== 'function') {
+      window.clearMatches = function() {
+        document.querySelectorAll('.blink-cell').forEach(el => {
+          el.classList.remove('blink-cell');
+        });
+      };
+    }
+    
+    clearMatches();
+    
+    // Validar que los elementos del DOM existan
+    if (!el.tableWrap) {
+      console.error('El contenedor de la tabla no existe');
+      return;
+    }
 
-    const filtered = getFilteredRows(rows);
-  const keys = getHeaderKeys(filtered.length ? filtered : rows);
+    // Asegurarse de que state.currentRows sea un array
+    const rows = Array.isArray(state.currentRows) ? state.currentRows : [];
+    
+    // Obtener filas filtradas (usando caché si está disponible)
+    const filtered = getFilteredRows(rows) || [];
+    
+    // Obtener claves de encabezado de manera segura
+    const keys = [];
+    try {
+      const sourceForKeys = filtered.length > 0 ? filtered : rows;
+      if (sourceForKeys.length > 0) {
+        const headerKeys = getHeaderKeys(sourceForKeys) || [];
+        keys.push(...headerKeys);
+      }
+    } catch (e) {
+      console.error('Error al obtener claves de encabezado:', e);
+    }
 
-  state.currentHeaders = keys;
+    state.currentHeaders = keys;
 
+    // Calcular desplazamiento y filas visibles
     const scrollTop = el.tableWrap.scrollTop || 0;
-  state.virtualStart = Math.max(0, Math.floor(scrollTop / state.rowHeight) - 3);
-  computeVisibleCount();
-  const visibleRows = filtered.slice(state.virtualStart, state.virtualStart + state.visibleCount);
-
-    const topSpacerHeight = state.virtualStart * state.rowHeight;
-  const bottomSpacerHeight = Math.max(0, (filtered.length - state.virtualStart - visibleRows.length) * state.rowHeight);
-
-    let html = '';
-  html += `<table><thead><tr>`;
-  keys.forEach(k => {
-    const cls = (state.sortState[k] === 'asc') ? 'order-asc' : 
-                (state.sortState[k] === 'desc') ? 'order-desc' : '';
-    const aria = getSortAriaLabel(k);
-    html += `<th class="${cls}" data-col="${encodeURIComponent(k)}" aria-label="${escapeAttribute(aria)}">${escapeHtml(k)}</th>`;
-  });
-  html += `</tr>`;
-
-    html += '<tr class="filter-row">';
-  keys.forEach(k=>{
-    const val = state.columnFilters[k] || '';
-    html += `<th><span class="filter-col-wrap">
-      <input class="filter-col" data-col="${encodeURIComponent(k)}" 
-             value="${escapeAttribute(val)}" placeholder="${t('filterColumn')}" />
-      <button class="clear-btn filter-col-clear" data-col="${encodeURIComponent(k)}" 
-              title="${t('clearFilter')}" aria-label="${t('clearFilter')}" data-i18n-title="clearFilter" data-i18n-aria-label="clearFilter">✕</button>
-    </span></th>`;
-  });
-  html += '</tr></thead><tbody>';
-
-    if(topSpacerHeight > 0){
-    html += `<tr style="height:${topSpacerHeight}px">
-      <td style="padding:0;border:none" colspan="${keys.length}"></td>
-    </tr>`;
-  }
-
-  if(visibleRows.length){
-        visibleRows.forEach((r, idx)=>{
-      html += '<tr>';
-      keys.forEach(k=>{
-        const v = r[k] == null ? '' : escapeHtml(String(r[k]));
-
-                let cellClasses = '';
-        const cellValue = String(r[k] || '').toLowerCase();
-        const globalFilter = (el.filterGlobal.value || '').toLowerCase();
-        const columnFilter = (state.columnFilters[k] || '').toLowerCase();
-
-                if(globalFilter && cellValue.includes(globalFilter)){
-          cellClasses += ' global-match';
-        }
-        if(columnFilter && cellValue.includes(columnFilter)){
-          cellClasses += ' column-match';
-        }
-
-        html += `<td data-row="${state.virtualStart + idx}" data-col="${encodeURIComponent(k)}" class="${cellClasses.trim()}">${v}</td>`;
-      });
-      html += '</tr>';
+    state.virtualStart = Math.max(0, Math.floor(scrollTop / state.rowHeight) - 3);
+    computeVisibleCount();
+    
+    // Calcular el rango de filas a mostrar
+    const visibleStart = state.virtualStart;
+    const visibleEnd = Math.min(filtered.length, visibleStart + state.visibleCount);
+    
+    // Calcular los chunks que necesitamos renderizar
+    const startChunk = Math.floor(visibleStart / state.chunkSize);
+    const endChunk = Math.ceil(visibleEnd / state.chunkSize);
+    
+    // Activamos el renderizado por chunks automáticamente para conjuntos de datos grandes (>500 filas)
+    const renderChunks = filtered.length > 500;
+    
+    // Construir el HTML de la tabla
+    let html = '<table><thead><tr>';
+    
+    // Generar encabezados de la tabla
+    keys.forEach(k => {
+      try {
+        const sortState = state.sortState || {};
+        const cls = (sortState[k] === 'asc') ? 'order-asc' :
+                   (sortState[k] === 'desc') ? 'order-desc' : '';
+        const aria = getSortAriaLabel(k);
+        const safeK = k ? String(k) : '';
+        html += `<th class="${cls}" data-col="${encodeURIComponent(safeK)}" ` +
+                `aria-label="${escapeAttribute(aria || '')}">${escapeHtml(safeK)}</th>`;
+      } catch (e) {
+        console.error('Error al generar encabezado de columna:', e);
+      }
     });
-  } else {
-        html += `<tr><td colspan="${keys.length}" style="padding:12px;color:var(--muted)">
-      ${t('noResults')}
-    </td></tr>`;
+
+    // La columna de acciones se ha eliminado para una interfaz más limpia
+    
+    html += '</tr>';
+
+    // Fila de filtros
+    html += '<tr class="filter-row">';
+    keys.forEach(k => {
+      try {
+        const safeK = k ? String(k) : '';
+        const columnFilters = state.columnFilters || {};
+        const val = columnFilters[safeK] || '';
+
+        html += `<th><span class="filter-col-wrap">` +
+                `<input class="filter-col" data-col="${encodeURIComponent(safeK)}" ` +
+                `value="${escapeAttribute(val)}" placeholder="${t('filterColumn')}" />` +
+                `<button class="clear-btn filter-col-clear" data-col="${encodeURIComponent(safeK)}" ` +
+                `title="${t('clearFilter')}" aria-label="${t('clearFilter')}" ` +
+                `data-i18n-title="clearFilter" data-i18n-aria-label="clearFilter">✕</button>` +
+                `</span></th>`;
+      } catch (e) {
+        console.error('Error al generar filtro de columna:', e);
+      }
+    });
+
+    // La columna de acciones se ha eliminado completamente para una interfaz más limpia
+
+    html += '</tr></thead><tbody>';
+
+    // Espaciador superior para scroll virtual
+    const topSpacerHeight = visibleStart * state.rowHeight;
+    if (topSpacerHeight > 0) {
+      html += `<tr style="height:${topSpacerHeight}px">`;
+      html += `<td style="padding:0;border:none" colspan="${keys.length}"></td>`;
+      html += '</tr>';
+    }
+
+    // Filas visibles
+    if (filtered.length > 0) {
+      const globalFilterValue = (el.filterGlobal?.value || '').toLowerCase();
+
+      const renderRow = (row, absoluteIndex) => {
+        const rowHtml = buildTableRow(keys, row, absoluteIndex, globalFilterValue);
+        return rowHtml || '';
+      };
+
+      if (renderChunks) {
+        const renderedChunks = new Set();
+        for (let chunk = startChunk; chunk <= endChunk; chunk++) {
+          const chunkStart = chunk * state.chunkSize;
+          const chunkEnd = Math.min((chunk + 1) * state.chunkSize, filtered.length);
+
+          if (chunkEnd > visibleStart && chunkStart < visibleEnd) {
+            for (let rowIndex = chunkStart; rowIndex < chunkEnd; rowIndex++) {
+              if (rowIndex >= visibleStart && rowIndex < visibleEnd) {
+                html += renderRow(filtered[rowIndex], rowIndex);
+              }
+            }
+            renderedChunks.add(chunk);
+          }
+        }
+        state.renderedChunks = renderedChunks;
+      } else {
+        const visibleRows = filtered.slice(visibleStart, visibleEnd);
+        visibleRows.forEach((row, index) => {
+          html += renderRow(row, visibleStart + index);
+        });
+      }
+    } else {
+      // Mensaje cuando no hay filas que mostrar
+      html += `<tr><td colspan="${keys.length}" class="no-results">`;
+      html += t('noResults');
+      html += '</td></tr>';
+    }
+
+    // Espaciador inferior para scroll virtual
+    const bottomSpacerHeight = Math.max(0, (filtered.length - visibleEnd) * state.rowHeight);
+    if (bottomSpacerHeight > 0) {
+      html += `<tr style="height:${bottomSpacerHeight}px">`;
+      html += `<td style="padding:0;border:none" colspan="${keys.length}"></td>`;
+      html += '</tr>';
+    }
+
+    // Cerrar la tabla
+    html += '</tbody></table>';
+
+    // Actualizar el DOM
+    el.tableWrap.innerHTML = html;
+    
+    // Adjuntar eventos
+    attachTableEvents(filtered);
+    updateActionButtons();
+    updateClearButtons();
+
+    // Aplicar blinks para filtros globales (aplicar a celdas con coincidencias)
+    const globalFilter = (el.filterGlobal?.value || '').toLowerCase();
+    if (globalFilter) {
+      // Limpiar clases previas para evitar acumulaciones
+      const existingMatches = el.tableWrap.querySelectorAll('.blink-cell');
+      existingMatches.forEach(el => el.classList.remove('blink-cell'));
+      
+      // Aplicar blink a celdas que contienen palabras resaltadas
+      el.tableWrap.querySelectorAll('tbody tr td mark.highlight').forEach(mark => {
+        const td = mark.closest('td');
+        const text = mark.textContent;
+        if (td) {
+          blinkCell(td);
+        }
+        mark.replaceWith(document.createTextNode(text));
+      });
+    }
+
+    for (const [col, filter] of Object.entries(state.columnFilters || {})) {
+      if (filter) {
+        // Limpiar clases previas para columnas
+        const existingMatches = el.tableWrap.querySelectorAll('.blink-cell');
+        existingMatches.forEach(el => el.classList.remove('blink-cell'));
+        
+        const colIndex = state.currentHeaders.indexOf(col);
+        if (colIndex >= 0) {
+          const tds = el.tableWrap.querySelectorAll(`tbody tr td:nth-child(${colIndex + 1})`);
+          tds.forEach((td, idx) => {
+            const row = filtered[visibleStart + idx];
+            if (row) {
+              const displayValue = row[col] !== undefined ? String(row[col]) : '';
+              if (displayValue.toLowerCase().includes(filter.toLowerCase())) {
+                blinkCell(td);
+              }
+            }
+          });
+        }
+      }
+    }
+    
+  } catch (error) {
+    console.error('Error en renderTable:', error);
+    if (el.tableWrap) {
+      el.tableWrap.innerHTML = `
+        <div class="error-message">
+          <p>Error al mostrar la tabla. Por favor, verifica los datos e inténtalo de nuevo.</p>
+          <button onclick="location.reload()" class="btn">Recargar página</button>
+        </div>`;
+    }
   }
-
-    if(bottomSpacerHeight > 0){
-    html += `<tr style="height:${bottomSpacerHeight}px">
-      <td style="padding:0;border:none" colspan="${keys.length}"></td>
-    </tr>`;
-  }
-
-  html += `</tbody></table>`;
-
-  el.tableWrap.innerHTML = html;
-  attachTableEvents(filtered);
-  updateActionButtons();
-  updateClearButtons();
 }
 
 function setLastJson(text){
@@ -1986,16 +4572,16 @@ function buildTableHtml(rows, keys, showFilters = false){
     const aria = getSortAriaLabel(k);
     html += `<th class="${cls}" data-col="${encodeURIComponent(k)}" aria-label="${escapeAttribute(aria)}">${escapeHtml(k)}</th>`;
   });
-  html += `</tr>`;
+    html += `</tr>`;
 
   if(showFilters){
     html += '<tr class="filter-row">';
     keys.forEach(k=>{
       const val = state.columnFilters[k] || '';
       html += `<th><span class="filter-col-wrap">
-        <input class="filter-col" data-col="${encodeURIComponent(k)}" 
+        <input class="filter-col" data-col="${encodeURIComponent(k)}"
                value="${escapeAttribute(val)}" placeholder="${t('filterColumn')}" />
-        <button class="clear-btn filter-col-clear" data-col="${encodeURIComponent(k)}" 
+        <button class="clear-btn filter-col-clear" data-col="${encodeURIComponent(k)}"
                 title="${t('clearFilter')}" aria-label="${t('clearFilter')}" data-i18n-title="clearFilter" data-i18n-aria-label="clearFilter">✕</button>
       </span></th>`;
     });
@@ -2060,9 +4646,10 @@ function attachTableEvents(filteredRows){
   }, state.filterDebounceMs);
 
   el.tableWrap.querySelectorAll('.filter-col').forEach(inp=>{
-        inp.addEventListener('input', (e)=> {
+    inp.addEventListener('input', (e)=> {
       const col = decodeURIComponent(inp.dataset.col);
       state.columnFilters[col] = inp.value;
+      saveColumnFilters();
       deb();
     });
 
@@ -2079,7 +4666,8 @@ function attachTableEvents(filteredRows){
     btn.addEventListener('click', function(e) {
       e.stopPropagation();
       const col = decodeURIComponent(btn.dataset.col);
-      state.columnFilters[col] = '';
+    state.columnFilters[col] = '';
+    saveColumnFilters();
       invalidateFilterCache();
 
             const input = document.querySelector(`.filter-col[data-col="${encodeURIComponent(col)}"]`);
@@ -2132,8 +4720,15 @@ function onCellEdit(e){
   const virtualRowIdx = Number(td.dataset.row);
   const col = decodeURIComponent(td.dataset.col);
   const newVal = td.innerText;
+  
+  // Rastrear celdas editadas
+  const cellKey = `${virtualRowIdx}:${col}`;
+  if (state.editing) {
+    editedCellSet.add(cellKey);
+    updateEditBadgeCounter();
+  }
 
-    const actualIdx = virtualRowIdx;
+  const actualIdx = virtualRowIdx;
   if(typeof actualIdx === 'number' && state.currentRows[actualIdx]){
     state.currentRows[actualIdx][col] = newVal;
   }
@@ -2202,6 +4797,13 @@ el.clearBtn.addEventListener('click', ()=>{
 });
 
 const debFilterGlobal = debounce(()=>{ 
+  const currentValue = el.filterGlobal?.value || '';
+  try {
+    localStorage.setItem('globalFilter', currentValue);
+  } catch (e) {
+    console.warn('No se pudo guardar el filtro global:', e);
+  }
+  console.log('Aplicando filtro global:', currentValue);
   renderTable(); 
   updateActionButtons(); 
 }, state.filterDebounceMs);
@@ -2213,20 +4815,29 @@ el.filterGlobalClearBtn.addEventListener('click', ()=>{
   el.filterGlobal.focus();
   renderTable();
   announce('globalFilterCleared');
+  try {
+    localStorage.removeItem('globalFilter');
+  } catch (e) {
+    console.warn('No se pudo eliminar el filtro global persistido:', e);
+  }
 });
 
 el.editBtn.addEventListener('click', ()=>{
   state.editing = !state.editing;
   el.editBtn.classList.toggle('active', state.editing);
-  document.getElementById('editBtnText').textContent = state.editing ? t('save') : t('edit');
+  if(el.editBtnText) el.editBtnText.textContent = state.editing ? t('save') : t('edit');
   if(!state.editing) saveLastJson();
   document.body.classList.toggle('edit-mode-active', state.editing);
   const badge = document.getElementById('editModeBadge');
   if(badge){
     if(state.editing){
       badge.setAttribute('aria-hidden', 'false');
+      // Reiniciar el contador al activar la edición
+      resetEditTracking();
+      announce('editModeActive');
     } else {
       badge.setAttribute('aria-hidden', 'true');
+      announce('editModeInactive');
     }
   }
   renderTable();
@@ -2363,79 +4974,70 @@ el.separatorSelect.addEventListener('change', ()=>{
 });
 
 el.configBtn.addEventListener('click', ()=> {
-  el.drawer.classList.toggle('open');
-  showConfigTab();
+  const willOpen = !el.drawer.classList.contains('open');
+  toggleDrawer(willOpen);
 });
 
 el.drawerCloseBtn.addEventListener('click', ()=> {
-  el.drawer.classList.remove('open');
-  showConfigTab();
+  toggleDrawer(false);
+});
+
+if(el.drawerOverlay){
+  el.drawerOverlay.addEventListener('click', ()=>{
+    toggleDrawer(false);
+  });
+}
+
+document.addEventListener('keydown', (e)=>{
+  if(e.key === 'Escape' && el.drawer.classList.contains('open')){
+    e.preventDefault();
+    toggleDrawer(false);
+  }
 });
 
 el.tabConfig.addEventListener('click', showConfigTab);
 el.tabCustom.addEventListener('click', showCustomTab);
 
-el.themeLight.addEventListener('click', ()=> {
-  localStorage.setItem('theme','light');
-  document.body.classList.remove('dark');
-    loadCustomTheme();
+if(el.themePresetToggle){
+  el.themePresetToggle.addEventListener('click', toggleThemePresetDropdown);
+}
+
+document.addEventListener('click', (event)=>{
+  if(!el.themePresetDropdown || !el.themePresetToggle) return;
+  if(el.themePresetDropdown.hidden) return;
+  if(el.themePresetToggle.contains(event.target)) return;
+  if(el.themePresetDropdown.contains(event.target)) return;
+  closeThemePresetDropdown();
 });
 
-el.themeDark.addEventListener('click', ()=> {
-  localStorage.setItem('theme','dark');
-  document.body.classList.add('dark');
-    loadCustomTheme();
+if(el.jsonHistoryToggle){
+  el.jsonHistoryToggle.addEventListener('click', toggleHistoryDropdown);
+}
+
+document.addEventListener('click', (event)=>{
+  if(!el.jsonHistoryDropdown || !el.jsonHistoryToggle) return;
+  if(el.jsonHistoryDropdown.hidden) return;
+  if(el.jsonHistoryToggle.contains(event.target)) return;
+  if(el.jsonHistoryDropdown.contains(event.target)) return;
+  closeHistoryDropdown();
 });
 
-el.jsonHistorySelect.addEventListener('change', ()=>{
-  const hasSelection = el.jsonHistorySelect.value !== '';
-  el.deleteHistoryBtn.disabled = !hasSelection;
-  el.loadHistoryBtn.disabled = !hasSelection;
-});
+if(el.languageToggle){
+  el.languageToggle.addEventListener('click', toggleLanguageDropdown);
+}
 
-el.loadHistoryBtn.addEventListener('click', ()=>{
-  const idx = el.jsonHistorySelect.value;
-  if(idx === '') return;
-  const item = state.history[idx];
-  if(!item) return;
-  if(!confirm(t('loadJsonFromHistory'))) return;
-
-  el.jsonin.value = item.data;
-  state.lastParsedFull = tryParseJson(item.data);
-  clearAllFilters();
-  parseJsonInput(false);
-});
-
-el.renameHistoryBtn.addEventListener('click', ()=>{
-  const idx = el.jsonHistorySelect.value;
-  if(idx === '') return alert(t('selectJsonFromHistory'));
-  const newName = prompt(t('newName'), state.history[idx].name || '');
-  if(newName){ 
-    state.history[idx].name = newName; 
-    saveHistory(); 
-    renderHistoryDropdown(); 
-    el.jsonHistorySelect.value = idx; 
-  }
-});
-
-el.deleteHistoryBtn.addEventListener('click', ()=>{
-  const idx = el.jsonHistorySelect.value;
-  if(idx === '') return alert(t('selectItemToDelete'));
-  if(confirm(t('deleteFromHistory'))){
-    state.history.splice(idx, 1);
-    saveHistory(); 
-    renderHistoryDropdown();
-    el.jsonHistorySelect.value = '';
-    el.deleteHistoryBtn.disabled = true;
-    el.loadHistoryBtn.disabled = true;
-  }
+document.addEventListener('click', (event)=>{
+  if(!el.languageDropdown || !el.languageToggle) return;
+  if(el.languageDropdown.hidden) return;
+  if(el.languageToggle.contains(event.target)) return;
+  if(el.languageDropdown.contains(event.target)) return;
+  closeLanguageDropdown();
 });
 
 el.mobileSwitchBtn.addEventListener('click', ()=>{
   enableMobileMode(!state.mobileMode);
 });
-
-['bgColor','textColor','fontFamily','cellEven','cellOdd'].forEach(id=>{
+['bgColor','textColor','headerColor','fontFamily','cellEven','cellOdd'].forEach(id=>{
   const node = el[id] || document.getElementById(id);
   if(node){
     node.addEventListener('input', ()=>{
@@ -2444,43 +5046,89 @@ el.mobileSwitchBtn.addEventListener('click', ()=>{
   }
 });
 
-el.customDefaultBtn.addEventListener('click', ()=>{
-  if(!confirm(t('resetThemeConfirm'))) return;
-  localStorage.removeItem('customTheme');
-  const isDark = document.body.classList.contains('dark');
-  if(isDark){
-        el.bgColor.value = '#141414';
-    el.textColor.value = '#eee';
-    el.cellEven.value = '#252525';
-    el.cellOdd.value = '#202020';
-    applyCustomTheme({
-      bg:'#141414',
-      text:'#eee',
-      cellEven:'#252525',
-      cellOdd:'#202020'
-    });
-  } else {
-        el.bgColor.value = '#ffffff';
-    el.textColor.value = '#111111';
-    el.cellEven.value = '#f9f9f9';
-    el.cellOdd.value = '#eef3ff';
-    applyCustomTheme({
-      bg:'#ffffff',
-      text:'#111111',
-      cellEven:'#f9f9f9',
-      cellOdd:'#eef3ff'
-    });
-  }
-  el.fontFamily.value = "'Inter', Arial, sans-serif";
+// Evento especial para fontSize que actualiza la altura de fila
+const fontSizeNode = el.fontSize || document.getElementById('fontSize');
+if(fontSizeNode){
+  fontSizeNode.addEventListener('input', ()=>{
+    saveCustomTheme();
+    updateRowHeight();
+    if(state.currentRows && state.currentRows.length > 0){
+      renderTable();
+    }
+  });
+}
+
+el.tabConfig.addEventListener('click', showConfigTab);
+el.tabCustom.addEventListener('click', showCustomTab);
+
+el.themeLight.addEventListener('click', ()=> {
+  localStorage.setItem('theme','light');
+  document.body.classList.remove('dark');
+  loadCustomTheme();
+  updateRowHeight();
+  renderTable();
 });
 
-document.addEventListener('mousedown', (e)=>{
-  if(el.drawer.classList.contains('open')){
-    if(!el.drawer.contains(e.target) && !el.configBtn.contains(e.target) && !el.drawerCloseBtn.contains(e.target)){
-      el.drawer.classList.remove('open');
-      showConfigTab();
+if(el.themeDark){
+  el.themeDark.addEventListener('click', ()=> {
+    localStorage.setItem('theme','dark');
+    document.body.classList.add('dark');
+    loadCustomTheme();
+    updateRowHeight();
+    renderTable();
+  });
+}
+
+if(el.customSaveBtn){
+  el.customSaveBtn.addEventListener('click', ()=>{
+    const name = prompt(t('saveThemePrompt') || 'Nombre para el tema');
+    if(name === null) return;
+    const saved = saveThemePreset(name);
+    if(saved && el.themePresetSelected){
+      el.themePresetSelected.textContent = name.trim() || t('themePresetPlaceholder');
     }
-  }
+    closeThemePresetDropdown();
+  });
+}
+
+el.customDefaultBtn.addEventListener('click', ()=>{
+  if(!confirm(t('resetThemeConfirm'))) return;
+  const isDark = document.body.classList.contains('dark');
+  const themeKey = 'customTheme_' + (isDark ? 'dark' : 'light');
+  const defaults = isDark ? {
+    bg: '#141414',
+    text: '#EEEEEE',
+    header: '#222222',
+    cellEven: '#252525',
+    cellOdd: '#202020',
+    font: "'Segoe UI', Tahoma, sans-serif",
+    fontSize: '12'
+  } : {
+    bg: '#ffffff',
+    text: '#111111',
+    header: '#f2f2f2',
+    cellEven: '#f9f9f9',
+    cellOdd: '#eef3ff',
+    font: "'Segoe UI', Tahoma, sans-serif",
+    fontSize: '12'
+  };
+  el.bgColor.value = defaults.bg;
+  el.textColor.value = defaults.text;
+  el.headerColor.value = defaults.header;
+  el.cellEven.value = defaults.cellEven;
+  el.cellOdd.value = defaults.cellOdd;
+  el.fontFamily.value = defaults.font;
+  if(el.fontSize) el.fontSize.value = defaults.fontSize;
+  localStorage.removeItem(themeKey);
+  const storedDefaults = saveCustomTheme({
+    ...defaults,
+    fontSize: Number(defaults.fontSize)
+  });
+  applyCustomTheme(storedDefaults);
+  document.documentElement.style.setProperty('--font-main', storedDefaults.font);
+  document.documentElement.style.setProperty('--custom-font-size', `${storedDefaults.fontSize}px`);
+  state.selectedThemePreset = '';
+  loadThemePresets();
 });
 
 el.urlIn.addEventListener('input', updateFetchButtonState);
@@ -2510,182 +5158,89 @@ el.jsonin.addEventListener('input', async ()=>{
   }, 500);
 });
 
-function updateClearButtons() {
-    const urlInput = document.getElementById('urlIn');
-  const urlClearBtn = document.getElementById('urlClearBtn');
-  if (urlInput && urlClearBtn) {
-    urlClearBtn.style.display = urlInput.value ? 'block' : 'none';
-  }
-
-    const filterGlobal = document.getElementById('filterGlobal');
-  const filterClearBtn = document.getElementById('filterGlobalClearBtn');
-  if (filterGlobal && filterClearBtn) {
-    filterClearBtn.style.display = filterGlobal.value ? 'block' : 'none';
-  }
-
-    document.querySelectorAll('.filter-col').forEach(input => {
-    const clearBtn = input.nextElementSibling;
-    if (clearBtn && clearBtn.classList.contains('clear-btn')) {
-      clearBtn.style.display = input.value ? 'block' : 'none';
+document.addEventListener('click', (e) => {
+  if (e.target && e.target.classList.contains('filter-col-clear')) {
+    const col = decodeURIComponent(e.target.dataset.col || '');
+    state.columnFilters[col] = '';
+    const input = document.querySelector(`.filter-col[data-col="${encodeURIComponent(col)}"]`);
+    if (input) {
+      input.value = '';
+      input.focus();
     }
-  });
-}
+    updateClearButtons();
+    renderTable();
+  }
+});
 
-const urlInput = document.getElementById('urlIn');
-const filterGlobal = document.getElementById('filterGlobal');
-
-if (urlInput) {
-  urlInput.addEventListener('input', updateClearButtons);
-  urlInput.addEventListener('focus', updateClearButtons);
-  urlInput.addEventListener('blur', updateClearButtons);
-}
-
-if (filterGlobal) {
-  filterGlobal.addEventListener('input', updateClearButtons);
-  filterGlobal.addEventListener('focus', updateClearButtons);
-  filterGlobal.addEventListener('blur', updateClearButtons);
-}
-
-document.addEventListener('DOMContentLoaded', updateClearButtons);
-
-window.addEventListener('resize', ()=>{
+window.addEventListener('resize', () => {
   computeVisibleCount();
   renderTable();
 });
 
-(async function init(){
-  try{
-        const savedLang = localStorage.getItem('language') || 'en';
-    state.currentLanguage = savedLang;
-    el.languageSelect.value = savedLang;
+// Configurar manejador de eventos para el selector de idioma
+if (el.languageSelect) {
+  el.languageSelect.addEventListener('change', function(e) {
+    console.log('Idioma cambiado a:', this.value);
+    changeLanguage(this.value);
+  });
+}
 
-        const savedTheme = localStorage.getItem('theme');
-    if(savedTheme === 'dark') {
-      document.body.classList.add('dark');
-    } else {
-      document.body.classList.remove('dark');
-    }
+// Inicializar botones de limpieza
+document.addEventListener('DOMContentLoaded', initClearButtons);
 
-        loadCustomTheme();
+// Si el DOM ya está cargado, inicializar de inmediato
+if (document.readyState !== 'loading') {
+  initClearButtons();
+}
 
-        loadHistory();
+// Evento para el botón copiar tabla
+el.copyBtn.addEventListener('click', (e)=>{
+  if(!state.currentRows || !state.currentRows.length) return;
 
-        const last = localStorage.getItem('lastJson');
-    if(last && last.trim()){ 
-      el.jsonin.value = last; 
-      state.lastParsedFull = tryParseJson(last); 
-      await parseJsonInput(false); 
-    } else { 
-      updateActionButtons(); 
-    }
-
-        updateFetchButtonState();
-
-        const mobile = localStorage.getItem('mobileMode') === 'true';
-    enableMobileMode(mobile);
-
-        updateUITexts();
-
-        console.log('Configurando evento change para el selector de idioma');
-    el.languageSelect.addEventListener('change', function(e) {
-      console.log('Idioma cambiado a:', this.value);
-      changeLanguage(this.value);
+  const sep = el.separatorSelect.value;
+  const content = rowsToCsv(state.currentRows, sep);
+  
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(content).then(()=>{
+      console.log('Tabla copiada al portapapeles');
+      announce('tableCopied');
+      showCopyMessage(e.clientX, e.clientY);
+    }).catch(err=>{
+      console.error('Error al copiar al portapapeles:', err);
+      // Fallback para navegadores antiguos
+      const textArea = document.createElement('textarea');
+      textArea.value = content;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      announce('tableCopied');
+      showCopyMessage(e.clientX, e.clientY);
     });
-
-        console.log('Idioma actual:', state.currentLanguage, 'Valor del selector:', el.languageSelect.value);
-
-        function updateClearButtons() {
-            const urlInput = document.getElementById('urlIn');
-      const urlClearBtn = document.getElementById('urlClearBtn');
-      if (urlInput && urlClearBtn) {
-        urlClearBtn.style.display = urlInput.value ? 'block' : 'none';
-      }
-
-            const filterGlobal = document.getElementById('filterGlobal');
-      const filterClearBtn = document.getElementById('filterGlobalClearBtn');
-      if (filterGlobal && filterClearBtn) {
-        filterClearBtn.style.display = filterGlobal.value ? 'block' : 'none';
-      }
-
-            document.querySelectorAll('.filter-col').forEach(input => {
-        const wrap = input.closest('.filter-col-wrap');
-        if (!wrap) return;
-
-        const clearBtn = wrap.querySelector('.clear-btn');
-        if (clearBtn) {
-                    clearBtn.style.display = input.value ? 'block' : 'none';
-
-                    if (!input.value) {
-            clearBtn.style.display = 'none';
-          }
-        }
-      });
-    }
-
-        updateClearButtons();
-
-        const inputs = document.querySelectorAll('input[type="text"], textarea');
-    inputs.forEach(input => {
-      input.addEventListener('input', updateClearButtons);
-      input.addEventListener('focus', updateClearButtons);
-      input.addEventListener('blur', updateClearButtons);
-    });
-
-        document.addEventListener('click', function(e) {
-      if (el.drawer && !el.drawer.contains(e.target) && e.target !== el.configBtn) {
-        el.drawer.classList.remove('open');
-      }
-    });
-
-        updateClearButtons();
-  } catch(e) {
-    console.error('Error en la inicialización:', e);
-  }
-})();     function initClearButtons() {
-        const urlInput = document.getElementById('urlIn');
-    if (urlInput) {
-      urlInput.addEventListener('input', updateClearButtons);
-      urlInput.addEventListener('focus', updateClearButtons);
-      urlInput.addEventListener('blur', updateClearButtons);
-    }
-
-        const filterGlobal = document.getElementById('filterGlobal');
-    if (filterGlobal) {
-      filterGlobal.addEventListener('input', updateClearButtons);
-      filterGlobal.addEventListener('focus', updateClearButtons);
-      filterGlobal.addEventListener('blur', updateClearButtons);
-    }
-
-        document.addEventListener('input', function(e) {
-      if (e.target.classList.contains('filter-col')) {
-                const col = decodeURIComponent(e.target.dataset.col);
-        state.columnFilters[col] = e.target.value;
-                updateClearButtons();
-      }
-    });
-
-        document.addEventListener('click', function(e) {
-      if (e.target.classList.contains('filter-col-clear')) {
-        const col = decodeURIComponent(e.target.dataset.col);
-        state.columnFilters[col] = '';
-                const input = document.querySelector(`.filter-col[data-col="${encodeURIComponent(col)}"]`);
-        if (input) {
-          input.value = '';
-          input.focus();
-        }
-        updateClearButtons();
-      }
-    });
-
-        updateClearButtons();
-  }
-
-    if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initClearButtons);
   } else {
-    initClearButtons();
+    // Fallback para navegadores antiguos
+    const textArea = document.createElement('textarea');
+    textArea.value = content;
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
+    announce('tableCopied');
+    showCopyMessage(e.clientX, e.clientY);
   }
+});
+
+function showCopyMessage(x, y) {
+  const msg = document.getElementById('copyMessage');
+  if (msg) {
+    msg.style.left = `${x + 10}px`; // 10px a la derecha del mouse
+    msg.style.top = `${y + 10}px`; // 10px abajo del mouse
+    msg.style.display = 'block';
+    setTimeout(() => {
+      msg.style.display = 'none';
+    }, 2000); // Ocultar después de 2 segundos
+  }
+}
 </script>
 
-<script src="https:</body>
-</html>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
