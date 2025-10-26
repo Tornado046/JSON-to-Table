@@ -3,6 +3,12 @@
 <head>
 <meta charset="utf-8" />
 <!-- Las cabeceras de seguridad deben configurarse en el servidor -->
+<!-- Configuración PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2979ff"/>
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title data-i18n="appTitle">JSON → Tabla Mejorada</title>
 
 <!--
@@ -264,6 +270,54 @@ if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
 } else {
   window.Security = Security;
 }
+
+// --- Tema oscuro automático y preferencia manual ---
+(function() {
+  // Detecta preferencia del sistema con media query
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const savedTheme = localStorage.getItem('theme');
+  
+  // Primera carga: si no hay preferencia guardada, aplica la del sistema
+  if (!savedTheme) {
+    if (prefersDark) document.body.classList.add('dark');
+    else document.body.classList.remove('dark');
+    // Nota: no guardamos aún, solo lo aplicamos visualmente
+  } else {
+    // Si hay preferencia guardada, respétala
+    if (savedTheme === 'dark') document.body.classList.add('dark');
+    else document.body.classList.remove('dark');
+  }
+  
+  // Observa cambios en el sistema SOLO si no hay preferencia manual
+  if (!savedTheme && window.matchMedia) {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+      if (!localStorage.getItem('theme')) {
+        if (e.matches) document.body.classList.add('dark');
+        else document.body.classList.remove('dark');
+      }
+    });
+  }
+  
+  // Cuando el usuario pulsa el botón de tema claro/oscuro, guarda preferencia
+  document.addEventListener('DOMContentLoaded', function() {
+    var themeLight = document.getElementById('themeLight');
+    var themeDark = document.getElementById('themeDark');
+    
+    if (themeLight) {
+      themeLight.addEventListener('click', () => {
+        localStorage.setItem('theme', 'light');
+        document.body.classList.remove('dark');
+      });
+    }
+    
+    if (themeDark) {
+      themeDark.addEventListener('click', () => {
+        localStorage.setItem('theme', 'dark');
+        document.body.classList.add('dark');
+      });
+    }
+  });
+})();
 </script>
 
 <script>
@@ -274,225 +328,13 @@ if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
 
 const i18n = (() => {
   // Idiomas soportados
-  const supportedLanguages = ['es', 'en'];
+  const supportedLanguages = ['es', 'en', 'fr', 'de', 'pt'];
   
   // Idioma por defecto
   let currentLanguage = 'es';
   
-  // Traducciones
-  const translations = {
-    es: {
-      // Interfaz general
-      appTitle: 'JSON → Tabla Mejorada',
-      closeButton: 'Cerrar',
-      saveButton: 'Guardar',
-      cancelButton: 'Cancelar',
-      loading: 'Cargando...',
-      
-      // Mensajes de error
-      error: 'Error',
-      invalidJson: 'JSON no válido',
-      fetchError: 'Error al cargar los datos',
-      
-      // Configuración
-      settings: 'Configuración',
-      theme: 'Tema',
-      language: 'Idioma',
-      darkMode: 'Modo oscuro',
-      lightMode: 'Modo claro',
-      
-      // Botones
-      download: 'Descargar',
-      clear: 'Limpiar',
-      apply: 'Aplicar',
-      edit: '✏️',
-      delete: 'Eliminar',
-      
-      // Filtros
-      filter: 'Filtrar',
-      clearFilters: 'Limpiar filtros',
-      
-      // Tabla
-      noData: 'No hay datos para mostrar',
-      rowsPerPage: 'Filas por página',
-      of: 'de',
-      
-      // Validación
-      requiredField: 'Este campo es obligatorio',
-      invalidUrl: 'URL no válida',
-      
-      // Títulos de secciones
-      jsonInput: 'Entrada JSON',
-      tablePreview: 'Vista previa de la tabla',
-      configuration: 'Configuración',
-      saveTheme: 'Guardar tema',
-      themeSaved: 'Tema guardado correctamente',
-      themePresets: 'Temas guardados',
-      themePresetPlaceholder: '-- Seleccionar tema --',
-      themePresetMeta: '{{count}} temas guardados',
-      loadThemePreset: 'Cargar tema',
-      renameThemePreset: 'Renombrar tema',
-      deleteThemePreset: 'Eliminar tema',
-      themePresetsLabel: 'Temas guardados',
-      loadThemePresetLabel: 'Cargar tema',
-      renameThemePresetLabel: 'Renombrar tema',
-      deleteThemePresetLabel: 'Eliminar tema',
-      themeLoaded: 'Tema cargado',
-      themeDeleted: 'Tema eliminado',
-      themeRenamed: 'Tema renombrado',
-      saveThemePrompt: 'Nombre para el tema',
-      renameThemePrompt: 'Nuevo nombre para el tema',
-      confirmDeleteTheme: '¿Eliminar este tema guardado?',
-      themePresetDuplicate: 'Ya existe un tema con estas opciones',
-      selectThemePreset: 'Seleccione un tema guardado',
-      noThemePresets: 'No hay temas guardados',
-      
-      // Textos adicionales (UI principal)
-      loadUrl: 'Cargar URL',
-      urlControls: 'Controles de URL',
-      urlPlaceholder: 'Pega URL aquí...',
-      clearUrl: 'Limpiar URL',
-      jsonPlaceholder: 'Pega o escribe JSON aquí',
-      clearJson: 'Limpiar JSON',
-      separator: 'Separador:',
-      downloadOption: 'Descargar...',
-      download: 'Descargar',
-      toggleRaw: 'Mostrar/ocultar JSON raw',
-      copyTable: 'Copiar tabla',
-      globalFilter: 'Filtrar...',
-      clearFilter: 'Limpiar filtro',
-      toggleEdit: 'Habilitar/deshabilitar edición',
-      editModeActive: 'Modo edición activo',
-      rawCsv: 'CSV en crudo',
-      closeConfiguration: 'Cerrar configuración',
-      customTheme: 'Tema personalizado',
-      language: 'Idioma',
-      languageEnglishDefault: 'Inglés',
-      languageSpanish: 'Español',
-      jsonHistory: 'Historial JSON',
-      selectJsonOption: '-- Seleccionar JSON --',
-      historySearchPlaceholder: 'Buscar en historial...',
-      load: 'Cargar',
-      rename: 'Renombrar',
-      delete: 'Eliminar',
-      default: 'Predeterminado',
-      background: 'Fondo',
-      text: 'Texto',
-      headerCells: 'Encabezados',
-      typography: 'Tipografía',
-      evenCells: 'Filas pares',
-      oddCells: 'Filas impares',
-      fontSize: 'Tamaño de fuente',
-      webMobile: 'Vista móvil',
-      tableCopied: 'Tabla copiada al portapapeles',
-      noResults: 'No se encontraron resultados'
-    },
-    en: {
-      // General Interface
-      appTitle: 'JSON → Enhanced Table',
-      closeButton: 'Close',
-      saveButton: 'Save',
-      cancelButton: 'Cancel',
-      loading: 'Loading...',
-      
-      // Error messages
-      error: 'Error',
-      invalidJson: 'Invalid JSON',
-      fetchError: 'Error loading data',
-      
-      // Configuration
-      settings: 'Settings',
-      theme: 'Theme',
-      language: 'Language',
-      darkMode: 'Dark Mode',
-      lightMode: 'Light Mode',
-      
-      // Buttons
-      download: 'Download',
-      clear: 'Clear',
-      apply: 'Apply',
-      edit: '✏️',
-      delete: 'Delete',
-      
-      // Filters
-      filter: 'Filter',
-      clearFilters: 'Clear filters',
-      
-      // Table
-      noData: 'No data available',
-      rowsPerPage: 'Rows per page',
-      of: 'of',
-      
-      // Validation
-      requiredField: 'This field is required',
-      invalidUrl: 'Invalid URL',
-      
-      // Section titles
-      jsonInput: 'JSON Input',
-      tablePreview: 'Table Preview',
-      configuration: 'Configuration',
-      saveTheme: 'Save theme',
-      themeSaved: 'Theme saved successfully',
-      themePresets: 'Saved themes',
-      themePresetPlaceholder: '-- Select theme --',
-      themePresetMeta: '{{count}} saved themes',
-      loadThemePreset: 'Load theme',
-      renameThemePreset: 'Rename theme',
-      deleteThemePreset: 'Delete theme',
-      themePresetsLabel: 'Saved themes',
-      loadThemePresetLabel: 'Load theme',
-      renameThemePresetLabel: 'Rename theme',
-      deleteThemePresetLabel: 'Delete theme',
-      themeLoaded: 'Theme loaded',
-      themeDeleted: 'Theme deleted',
-      themeRenamed: 'Theme renamed',
-      saveThemePrompt: 'Name for the theme',
-      renameThemePrompt: 'New name for the theme',
-      confirmDeleteTheme: 'Delete this saved theme?',
-      themePresetDuplicate: 'A theme with these settings already exists',
-      selectThemePreset: 'Select a saved theme',
-      noThemePresets: 'No saved themes',
-      
-      // Additional UI text
-      loadUrl: 'Load URL',
-      urlControls: 'URL controls',
-      urlPlaceholder: 'Paste URL here...',
-      clearUrl: 'Clear URL',
-      jsonPlaceholder: 'Paste or type JSON here',
-      clearJson: 'Clear JSON',
-      separator: 'Separator:',
-      downloadOption: 'Download...',
-      download: 'Download',
-      toggleRaw: 'Show/Hide raw JSON',
-      copyTable: 'Copy table',
-      globalFilter: 'Filter...',
-      clearFilter: 'Clear filter',
-      toggleEdit: 'Enable/disable editing',
-      editModeActive: 'Edit mode active',
-      rawCsv: 'Raw CSV',
-      closeConfiguration: 'Close configuration',
-      customTheme: 'Custom Theme',
-      languageEnglishDefault: 'English (default)',
-      languageSpanish: 'Spanish',
-      jsonHistory: 'JSON History',
-      selectJsonOption: '-- Select JSON --',
-      historySearchPlaceholder: 'Search history...',
-      load: 'Load',
-      rename: 'Rename',
-      delete: 'Delete',
-      default: 'Default',
-      background: 'Background',
-      text: 'Text',
-      headerCells: 'Headers',
-      typography: 'Typography',
-      evenCells: 'Even rows',
-      oddCells: 'Odd rows',
-      fontSize: 'Font size',
-      webMobile: 'Mobile view',
-      tableCopied: 'Table copied to clipboard',
-      noResults: 'No results found'
-    }
-  };
+  // Usar el objeto translations global definido más abajo
+  const translations = window.translations || {};
 
   /**
    * Establece el idioma actual
@@ -880,80 +722,7 @@ body.drawer-open{
   background:var(--accent);
   color:#fff;
   border-color: var(--accent);
-}
-
-/* Selector de fuentes con tamaño fijo */
-#fontFamily {
-  font-size: 14px !important; /* Tamaño fijo que no cambiará con el zoom */
-  min-height: 32px;
-  padding: 4px 8px;
-  border: 1px solid var(--input-border);
-  border-radius: 4px;
-  background-color: var(--input-bg);
-  color: var(--fg);
-}
-
-/* Asegurar que el dropdown también mantenga el tamaño */
-#fontFamily option {
-  font-size: 14px;
-  padding: 4px 8px;
-}
-
-/* Estilos para el contenedor de tema */
-.theme-toggle-container {
-  background: var(--bg);
-  border: 1px solid var(--input-border);
-  border-radius: 8px;
-  margin-bottom: 16px;
-  overflow: hidden;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-}
-
-.theme-toggle-header {
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--border-color);
-  background-color: var(--bg-secondary);
-}
-
-.theme-toggle-title {
-  font-weight: 500;
-  color: var(--fg);
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.theme-toggle-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  padding: 12px 16px;
-  margin: 0;
-}
-
-/* Estilos para los botones de tema */
-.theme-toggle-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  border-radius: 6px;
-  border: 1px solid var(--button-border);
-  background: var(--button-bg);
-  color: var(--fg);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 13px;
-}
-
-.theme-toggle-btn:hover {
-  background: var(--button-hover-bg);
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(var(--accent-rgb, 0, 102, 255), 0.2);
-}
-
-.theme-toggle-btn:active {
-  transform: translateY(1px);
+  position: relative;
 }
 
 .tab-btn.active:after {
@@ -1295,8 +1064,7 @@ mark.highlight {
 .language-presets-title,
 .history-presets-title,
 .theme-presets-title {
-  font-weight: 700;
-  font-size: 14px;
+  font-weight: 600;
   color: var(--fg);
   text-align: center;
   display: flex;
@@ -1317,7 +1085,7 @@ mark.highlight {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 6px; /* Cambiado a 6px en todos los lados */
+  padding: 10px 16px;
   border-radius: 6px;
   border: 1px solid var(--input-border);
   background: var(--bg);
@@ -1393,17 +1161,6 @@ mark.highlight {
   flex-direction: column;
   gap: 4px;
   padding: 8px;
-}
-
-.preset-dropdown-item,
-.language-preset-item,
-.history-preset-item,
-.theme-preset-item,
-.preset-dropdown-item *,
-.language-preset-item *,
-.history-preset-item *,
-.theme-preset-item * {
-  font-weight: 400 !important; /* Forzar peso normal en todos los elementos */
 }
 
 .preset-dropdown-item,
@@ -1499,8 +1256,8 @@ mark.highlight {
 .setting-row label {
   width: 140px;
   font-weight: 500;
-  font-size: 13px;
   color: var(--fg);
+  font-size: 14px;
   text-align: right;
   margin-right: 6px;
   cursor: default; 
@@ -1805,28 +1562,14 @@ mark.highlight {
   padding: 8px;
 }
 
-.history-preset-item,
-.history-preset-item * {
-  font-weight: 400 !important; /* Forzar peso normal en todos los elementos */
-}
-
 .history-preset-item {
   display: flex;
-  flex-direction: column;
-  padding: 8px 12px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  position: relative;
-}
-
-.history-preset-item .history-preset-name {
-  width: 100%;
-}
-
-.history-preset-item .history-inline-actions {
-  position: absolute;
-  right: 8px;
-  top: 8px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  transition: background 0.2s ease;
 }
 
 .history-preset-item:hover {
@@ -1963,6 +1706,51 @@ select {
 html {
   overflow-y: scroll;
 }
+
+/* Estilos para la edición inline de historial y presets */
+.history-inline-editor,
+.preset-inline-editor,
+.history-inline-confirm,
+.preset-inline-confirm {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+
+.history-inline-editor input[type="text"],
+.preset-inline-editor input[type="text"] {
+  flex: 1;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--fg);
+}
+
+.history-inline-editor button,
+.preset-inline-editor button,
+.history-inline-confirm button,
+.preset-inline-confirm button {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--button-border);
+  background: var(--button-bg);
+  cursor: pointer;
+}
+
+.history-inline-confirm .btn-confirm,
+.preset-inline-confirm .btn-confirm {
+  background: #ff6b6b;
+  color: white;
+  border-color: #ff6b6b;
+}
+
+.history-inline-confirm .btn-cancel,
+.preset-inline-confirm .btn-cancel {
+  background: transparent;
+  color: var(--fg);
+}
 </style>
 </head>
 <body>
@@ -2038,32 +1826,24 @@ html {
 </div>
 </div>
 
-<!-- Overlay del drawer - Se hace visible mediante JavaScript -->
-<div id="drawerOverlay" class="drawer-overlay" aria-hidden="true"></div>
+<div id="drawerOverlay" class="drawer-overlay" tabindex="-1" aria-hidden="true"></div>
 
-<div id="drawer" role="dialog" aria-label="Configuración" style="position:fixed; padding-top:16px;">
+<div id="drawer" role="dialog" aria-label="Configuración" style="position:fixed; padding-top:48px;">
   <button id="drawerCloseBtn" class="tab-btn" aria-label="Cerrar configuración" title="Cerrar configuración" style="position:absolute;top:10px;left:10px;width:36px;height:36px;font-size:22px;z-index:10001;display:flex;align-items:center;justify-content:center;line-height:36px;" data-i18n-title="closeConfiguration" data-i18n-aria-label="closeConfiguration">✕</button>
-  
-  <div class="tab-bar" style="margin-top: 40px;">
-    <button class="tab-btn active" id="tabConfig" aria-label="Configuración" aria-selected="true" role="tab" data-i18n="configuration" data-i18n-aria-label="configuration" style="font-size: 15px;">
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tabConfig" aria-label="Configuración" aria-selected="true" role="tab" data-i18n="configuration" data-i18n-aria-label="configuration">
       <span id="tabConfigText" data-i18n="configuration">Configuración</span>
     </button>
-    <button class="tab-btn" id="tabCustom" aria-label="Tema personalizado" aria-selected="false" role="tab" data-i18n="customTheme" data-i18n-aria-label="customTheme" style="font-size: 15px;">
+    <button class="tab-btn" id="tabCustom" aria-label="Tema personalizado" aria-selected="false" role="tab" data-i18n="customTheme" data-i18n-aria-label="customTheme">
       <span id="tabCustomText" data-i18n="customTheme">Tema personalizado</span>
     </button>
   </div>
 
   <div id="configContent" class="active">
 
-    <div class="theme-toggle-container">
-      <div class="theme-toggle-buttons">
-        <button id="themeLight" class="theme-toggle-btn" aria-label="Cambiar a modo claro" title="Modo claro" data-i18n-title="lightMode" data-i18n-aria-label="lightMode">
-          <span data-i18n="lightMode">Modo claro</span> ☀️
-        </button>
-        <button id="themeDark" class="theme-toggle-btn" aria-label="Cambiar a modo oscuro" title="Modo oscuro" data-i18n-title="darkMode" data-i18n-aria-label="darkMode">
-          <span data-i18n="darkMode">Modo oscuro</span> 🌙
-        </button>
-      </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <button id="themeLight" aria-label="Cambiar a modo claro" title="Modo claro" data-i18n-title="lightMode" data-i18n-aria-label="lightMode">☀️</button>
+      <button id="themeDark" aria-label="Cambiar a modo oscuro" title="Modo oscuro" data-i18n-title="darkMode" data-i18n-aria-label="darkMode">🌙</button>
     </div>
 
     <div class="preset-dropdown" aria-label="Lenguaje" data-i18n-aria-label="language">
@@ -2104,7 +1884,7 @@ html {
   </div>
 
   <div id="customPanel" class="custom-panel" style="display:none;">
-    <h2 id="customThemeTitle" data-i18n="customizeTheme" style="font-size: 14px; margin-bottom: 16px; font-weight: 700;">Personalizar tema</h2>
+    <h2 id="customThemeTitle" data-i18n="customizeTheme">Tema personalizado</h2>
 
     <div class="setting-container">
       <div class="setting-row">
@@ -2262,7 +2042,7 @@ const translations = {
     'download': 'Descargar',
     'fontSize': 'Tamaño de fuente',
     'selectJsonOption': '-- Seleccionar JSON --',
-    'languageEnglishDefault': 'Inglés',
+    'languageEnglishDefault': 'Inglés (predeterminado)',
     'languageSpanish': 'Español',
     'selectLanguageOption': '-- Seleccionar idioma --',
     'themePresetPlaceholder': '-- Seleccionar tema --',
@@ -2311,7 +2091,7 @@ const translations = {
     'closeConfiguration': 'Cerrar configuración',
     'lightMode': 'Modo claro',
     'darkMode': 'Modo oscuro',
-    'languageEnglishDefault': 'Inglés',
+    'languageEnglishDefault': 'Inglés (predeterminado)',
     'languageSpanish': 'Español'
   },
   en: {
@@ -2344,8 +2124,8 @@ const translations = {
     'download': 'Download',
     'fontSize': 'Font size',
     'selectJsonOption': '-- Select JSON --',
-    'languageEnglishDefault': 'English',
-    'languageSpanish': 'Español',
+    'languageEnglishDefault': 'English (default)',
+    'languageSpanish': 'Spanish',
     'selectLanguageOption': '-- Select language --',
     'themePresetPlaceholder': '-- Select theme --',
     'selectJson': '-- Select --',
@@ -2393,8 +2173,260 @@ const translations = {
     'closeConfiguration': 'Close settings',
     'lightMode': 'Light mode',
     'darkMode': 'Dark mode',
-    'languageEnglishDefault': 'English',
-    'languageSpanish': 'Spanish'
+    'languageEnglishDefault': 'English (default)',
+    'languageSpanish': 'Spanish',
+    'languageFrench': 'French',
+    'languageGerman': 'German',
+    'languagePortuguese': 'Portuguese'
+  },
+  fr: {
+    // Interface principale
+    'appTitle': 'JSON vers Tableau',
+    'loadUrl': 'Charger URL',
+    
+    // Mode géant
+    'enableGiantMode': 'Activer le mode géant (meilleures performances pour les grandes tables)',
+    'disableGiantMode': 'Désactiver le mode géant',
+    'giantModeEnabled': 'Mode géant activé. Les données seront affichées par blocs pour de meilleures performances.',
+    'giantModeDisabled': 'Mode géant désactivé. Toutes les données seront affichées en une seule fois.',
+    
+    'edit': '✏️',
+    'save': '💾',
+    'cancel': 'Annuler',
+    'clearJson': 'Effacer JSON',
+    'showRaw': 'Voir JSON',
+    'copyTable': 'Copier le tableau',
+    'globalFilter': 'Filtrer...',
+    'configuration': 'Configuration',
+    'customTheme': 'Thème personnalisé',
+    'language': 'Langue',
+    'jsonHistory': 'Historique',
+    'urlControls': 'Contrôles URL',
+    'clearUrl': 'Effacer URL',
+    'toggleRaw': 'Afficher/masquer JSON brut',
+    'rawCsv': 'CSV brut',
+    'separator': 'Séparateur :',
+    'download': 'Télécharger',
+    'fontSize': 'Taille de police',
+    'selectJsonOption': '-- Sélectionner JSON --',
+    'languageEnglishDefault': 'Anglais (par défaut)',
+    'languageSpanish': 'Espagnol',
+    'languageFrench': 'Français',
+    'languageGerman': 'Allemand',
+    'languagePortuguese': 'Portugais',
+    'selectLanguageOption': '-- Sélectionner une langue --',
+    'themePresetPlaceholder': '-- Sélectionner un thème --',
+    'selectJson': '-- Sélectionner --',
+    'load': 'Charger',
+    'rename': 'Renommer',
+    'delete': 'Supprimer',
+    'historySearchPlaceholder': 'Rechercher dans l\'historique...',
+    'webMobile': 'Vue mobile',
+    'customizeTheme': 'Personnaliser le thème',
+    'background': 'Arrière-plan',
+    'text': 'Texte',
+    'headerCells': 'En-têtes',
+    'typography': 'Typographie',
+    'evenCells': 'Lignes paires',
+    'oddCells': 'Lignes impaires',
+    'default': 'Par défaut',
+    'editModeActive': 'Mode édition actif',
+    'clearFilter': 'Effacer le filtre',
+    'filterColumn': 'Filtrer la colonne',
+    'noResults': 'Aucun résultat trouvé',
+    'tableCopied': 'Tableau copié dans le presse-papiers',
+    'sortColumnAsc': 'Trier la colonne par ordre croissant',
+    'sortColumnDesc': 'Trier la colonne par ordre décroissant',
+    'sortColumnDefault': 'Trier la colonne',
+    'historyCount': '{current} sur {total} (max {limit})',
+    'historyNoMatches': 'Aucun résultat dans l\'historique',
+    'historySizeExceeded': 'Le JSON est trop volumineux pour être enregistré dans l\'historique',
+    'lastJsonSizeExceeded': 'Le JSON est trop volumineux pour être enregistré localement',
+    'loadJsonFromHistory': 'Charger le JSON depuis l\'historique ?',
+    'newName': 'Nouveau nom',
+    'selectItemToDelete': 'Sélectionnez un élément à supprimer',
+    'deleteFromHistory': 'Supprimer de l\'historique ?',
+    'resetThemeConfirm': 'Réinitialiser le thème personnalisé ?',
+    'loading': 'Chargement...',
+    'urlPlaceholder': 'Collez l\'URL ici...',
+    'jsonPlaceholder': 'Collez ou écrivez du JSON ici',
+    'themePresets': 'Thèmes enregistrés',
+    'noThemePresets': 'Aucun thème enregistré',
+    'loadThemePreset': 'Charger le thème',
+    'renameThemePreset': 'Renommer le thème',
+    'deleteThemePreset': 'Supprimer le thème',
+    'saveTheme': 'Enregistrer le thème',
+    'toggleEdit': 'Activer/désactiver l\'édition',
+    'openConfiguration': 'Ouvrir la configuration',
+    'closeConfiguration': 'Fermer la configuration',
+    'lightMode': 'Mode clair',
+    'darkMode': 'Mode sombre'
+  },
+  de: {
+    // Hauptoberfläche
+    'appTitle': 'JSON zu Tabelle',
+    'loadUrl': 'URL laden',
+    
+    // Riesenmodus
+    'enableGiantMode': 'Riesenmodus aktivieren (bessere Leistung bei großen Tabellen)',
+    'disableGiantMode': 'Riesenmodus deaktivieren',
+    'giantModeEnabled': 'Riesenmodus aktiviert. Daten werden in Blöcken für bessere Leistung angezeigt.',
+    'giantModeDisabled': 'Riesenmodus deaktiviert. Alle Daten werden auf einmal angezeigt.',
+    
+    'edit': '✏️',
+    'save': '💾',
+    'cancel': 'Abbrechen',
+    'clearJson': 'JSON löschen',
+    'showRaw': 'JSON anzeigen',
+    'copyTable': 'Tabelle kopieren',
+    'globalFilter': 'Filtern...',
+    'configuration': 'Einstellungen',
+    'customTheme': 'Benutzerdefiniertes Design',
+    'language': 'Sprache',
+    'jsonHistory': 'Verlauf',
+    'urlControls': 'URL-Steuerelemente',
+    'clearUrl': 'URL löschen',
+    'toggleRaw': 'Roh-JSON ein-/ausblenden',
+    'rawCsv': 'Roh-CSV',
+    'separator': 'Trennzeichen:',
+    'download': 'Herunterladen',
+    'fontSize': 'Schriftgröße',
+    'selectJsonOption': '-- JSON auswählen --',
+    'languageEnglishDefault': 'Englisch (Standard)',
+    'languageSpanish': 'Spanisch',
+    'languageFrench': 'Französisch',
+    'languageGerman': 'Deutsch',
+    'languagePortuguese': 'Portugiesisch',
+    'selectLanguageOption': '-- Sprache auswählen --',
+    'themePresetPlaceholder': '-- Design auswählen --',
+    'selectJson': '-- Auswählen --',
+    'load': 'Laden',
+    'rename': 'Umbenennen',
+    'delete': 'Löschen',
+    'historySearchPlaceholder': 'Im Verlauf suchen...',
+    'webMobile': 'Mobile Ansicht',
+    'customizeTheme': 'Design anpassen',
+    'background': 'Hintergrund',
+    'text': 'Text',
+    'headerCells': 'Überschriften',
+    'typography': 'Typografie',
+    'evenCells': 'Gerade Zeilen',
+    'oddCells': 'Ungerade Zeilen',
+    'default': 'Standard',
+    'editModeActive': 'Bearbeitungsmodus aktiv',
+    'clearFilter': 'Filter zurücksetzen',
+    'filterColumn': 'Spalte filtern',
+    'noResults': 'Keine Ergebnisse gefunden',
+    'tableCopied': 'Tabelle in die Zwischenablage kopiert',
+    'sortColumnAsc': 'Spalte aufsteigend sortieren',
+    'sortColumnDesc': 'Spalte absteigend sortieren',
+    'sortColumnDefault': 'Spalte sortieren',
+    'historyCount': '{current} von {total} (max. {limit})',
+    'historyNoMatches': 'Keine Übereinstimmungen im Verlauf gefunden',
+    'historySizeExceeded': 'JSON ist zu groß zum Speichern im Verlauf',
+    'lastJsonSizeExceeded': 'JSON ist zu groß zum lokalen Speichern',
+    'loadJsonFromHistory': 'JSON aus dem Verlauf laden?',
+    'newName': 'Neuer Name',
+    'selectItemToDelete': 'Wählen Sie ein Element zum Löschen aus',
+    'deleteFromHistory': 'Aus dem Verlauf löschen?',
+    'resetThemeConfirm': 'Benutzerdefiniertes Design zurücksetzen?',
+    'loading': 'Wird geladen...',
+    'urlPlaceholder': 'URL hier einfügen...',
+    'jsonPlaceholder': 'JSON hier einfügen oder eingeben',
+    'themePresets': 'Gespeicherte Designs',
+    'noThemePresets': 'Keine gespeicherten Designs',
+    'loadThemePreset': 'Design laden',
+    'renameThemePreset': 'Design umbenennen',
+    'deleteThemePreset': 'Design löschen',
+    'saveTheme': 'Design speichern',
+    'toggleEdit': 'Bearbeitung ein-/ausschalten',
+    'openConfiguration': 'Einstellungen öffnen',
+    'closeConfiguration': 'Einstellungen schließen',
+    'lightMode': 'Heller Modus',
+    'darkMode': 'Dunkler Modus'
+  },
+  pt: {
+    // Interface principal
+    'appTitle': 'JSON para Tabela',
+    'loadUrl': 'Carregar URL',
+    
+    // Modo gigante
+    'enableGiantMode': 'Ativar modo gigante (melhor desempenho para tabelas grandes)',
+    'disableGiantMode': 'Desativar modo gigante',
+    'giantModeEnabled': 'Modo gigante ativado. Os dados serão exibidos em blocos para melhor desempenho.',
+    'giantModeDisabled': 'Modo gigante desativado. Todos os dados serão exibidos de uma vez.',
+    
+    'edit': '✏️',
+    'save': '💾',
+    'cancel': 'Cancelar',
+    'clearJson': 'Limpar JSON',
+    'showRaw': 'Ver JSON',
+    'copyTable': 'Copiar tabela',
+    'globalFilter': 'Filtrar...',
+    'configuration': 'Configuração',
+    'customTheme': 'Tema personalizado',
+    'language': 'Idioma',
+    'jsonHistory': 'Histórico',
+    'urlControls': 'Controles de URL',
+    'clearUrl': 'Limpar URL',
+    'toggleRaw': 'Mostrar/ocultar JSON bruto',
+    'rawCsv': 'CSV bruto',
+    'separator': 'Separador:',
+    'download': 'Baixar',
+    'fontSize': 'Tamanho da fonte',
+    'selectJsonOption': '-- Selecionar JSON --',
+    'languageEnglishDefault': 'Inglês (padrão)',
+    'languageSpanish': 'Espanhol',
+    'languageFrench': 'Francês',
+    'languageGerman': 'Alemão',
+    'languagePortuguese': 'Português',
+    'selectLanguageOption': '-- Selecionar idioma --',
+    'themePresetPlaceholder': '-- Selecionar tema --',
+    'selectJson': '-- Selecionar --',
+    'load': 'Carregar',
+    'rename': 'Renomear',
+    'delete': 'Excluir',
+    'historySearchPlaceholder': 'Pesquisar no histórico...',
+    'webMobile': 'Visualização móvel',
+    'customizeTheme': 'Personalizar tema',
+    'background': 'Plano de fundo',
+    'text': 'Texto',
+    'headerCells': 'Cabeçalhos',
+    'typography': 'Tipografia',
+    'evenCells': 'Linhas pares',
+    'oddCells': 'Linhas ímpares',
+    'default': 'Padrão',
+    'editModeActive': 'Modo de edição ativo',
+    'clearFilter': 'Limpar filtro',
+    'filterColumn': 'Filtrar coluna',
+    'noResults': 'Nenhum resultado encontrado',
+    'tableCopied': 'Tabela copiada para a área de transferência',
+    'sortColumnAsc': 'Classificar coluna em ordem crescente',
+    'sortColumnDesc': 'Classificar coluna em ordem decrescente',
+    'sortColumnDefault': 'Classificar coluna',
+    'historyCount': '{current} de {total} (máx. {limit})',
+    'historyNoMatches': 'Nenhuma correspondência encontrada no histórico',
+    'historySizeExceeded': 'O JSON é muito grande para ser salvo no histórico',
+    'lastJsonSizeExceeded': 'O JSON é muito grande para ser salvo localmente',
+    'loadJsonFromHistory': 'Carregar JSON do histórico?',
+    'newName': 'Novo nome',
+    'selectItemToDelete': 'Selecione um item para excluir',
+    'deleteFromHistory': 'Excluir do histórico?',
+    'resetThemeConfirm': 'Redefinir tema personalizado?',
+    'loading': 'Carregando...',
+    'urlPlaceholder': 'Cole a URL aqui...',
+    'jsonPlaceholder': 'Cole ou digite JSON aqui',
+    'themePresets': 'Temas salvos',
+    'noThemePresets': 'Nenhum tema salvo',
+    'loadThemePreset': 'Carregar tema',
+    'renameThemePreset': 'Renomear tema',
+    'deleteThemePreset': 'Excluir tema',
+    'saveTheme': 'Salvar tema',
+    'toggleEdit': 'Ativar/desativar edição',
+    'openConfiguration': 'Abrir configurações',
+    'closeConfiguration': 'Fechar configurações',
+    'lightMode': 'Modo claro',
+    'darkMode': 'Modo escuro'
   }
 };
 
@@ -2453,7 +2485,7 @@ function verifyTranslations() {
 // Configuración de internacionalización
 const i18nConfig = {
   defaultLanguage: 'es',
-  supportedLanguages: ['es', 'en'],
+  supportedLanguages: ['es', 'en', 'fr', 'de', 'pt'],
   
   // Función para cambiar de idioma
   changeLanguage: function(lang) {
@@ -2760,7 +2792,6 @@ function updateRowHeight() {
 }
 
 let announceTimer = null;
-let editedCellSet = new Set();
 
 const validators = {
   isValidUrl(value){
@@ -3196,7 +3227,7 @@ if(el.historySearchInput){
 
 function getLanguageLabel(code){
   const map = {
-    en: t('languageEnglishDefault') || 'English',
+    en: t('languageEnglishDefault') || 'English (default)',
     es: t('languageSpanish') || 'Español'
   };
   return map[code] || code;
@@ -3204,22 +3235,15 @@ function getLanguageLabel(code){
 
 function updateLanguageSelectedLabel(code){
   if(!el.languageSelected) return;
-  
-  if (code && code !== 'selectLanguageOption') {
-    const label = getLanguageLabel(code);
-    el.languageSelected.textContent = label;
-    el.languageSelected.setAttribute('data-i18n', ''); // Eliminar data-i18n para evitar conflictos
-  } else {
-    el.languageSelected.textContent = t('selectLanguageOption');
-    el.languageSelected.setAttribute('data-i18n', 'selectLanguageOption');
-  }
+  const label = getLanguageLabel(code);
+  el.languageSelected.textContent = label;
 }
 
 function renderLanguageDropdown(){
   if(!el.languageList) return;
 
   const languages = [
-    { code: 'en', label: t('languageEnglishDefault') || 'English' },
+    { code: 'en', label: t('languageEnglishDefault') || 'English (default)' },
     { code: 'es', label: t('languageSpanish') || 'Español' }
   ];
 
@@ -3428,33 +3452,10 @@ function renderHistoryDropdown(){
     const nameBtn = document.createElement('button');
     nameBtn.type = 'button';
     nameBtn.className = 'history-preset-name';
-    
-    // Crear contenedor para el nombre y la información
-    const nameContainer = document.createElement('div');
-    nameContainer.style.display = 'flex';
-    nameContainer.style.flexDirection = 'column';
-    nameContainer.style.alignItems = 'flex-start';
-    
-    // Nombre del JSON
-    const nameElement = document.createElement('div');
-    nameElement.textContent = item.name || `JSON ${item.idx + 1}`;
-    
-    // Información de fecha y tamaño
-    const infoElement = document.createElement('div');
-    infoElement.style.fontSize = '10px';
-    infoElement.style.opacity = '0.8';
-    infoElement.style.marginTop = '2px';
-    
     const dateStr = item.date ? new Date(item.date).toLocaleString() : '';
     const sizeStr = formatBytes(item.size);
-    infoElement.textContent = dateStr ? `(${dateStr} • ${sizeStr})` : `(${sizeStr})`;
-    
-    // Agregar elementos al contenedor
-    nameContainer.appendChild(nameElement);
-    nameContainer.appendChild(infoElement);
-    nameBtn.appendChild(nameContainer);
-    
     const baseName = item.name || `JSON ${item.idx + 1}`;
+    nameBtn.textContent = dateStr ? `${baseName} (${dateStr} • ${sizeStr})` : `${baseName} (${sizeStr})`;
     nameBtn.addEventListener('click', () => {
       state.selectedHistoryIndex = item.idx;
       if(el.jsonHistorySelected) el.jsonHistorySelected.textContent = baseName;
@@ -3470,949 +3471,9 @@ function renderHistoryDropdown(){
     renameBtn.className = 'history-inline-btn history-inline-rename';
     renameBtn.innerHTML = '<span aria-hidden="true">✏️</span>';
     renameBtn.setAttribute('aria-label', t('rename'));
-    renameBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const listItem = e.target.closest('.history-preset-item');
-      const nameBtn = listItem.querySelector('.history-preset-name');
-      const nameElement = nameBtn.querySelector('div:first-child');
-      
-      // Obtener el nombre actual del elemento (solo el nombre, sin fecha/tamaño)
-      let currentName = item.name || `JSON ${item.idx + 1}`;
-      
-      // Crear input para edición
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.value = currentName;
-      input.className = 'history-edit-input';
-      input.style.width = '100%';
-      input.style.padding = '4px';
-      input.style.border = '1px solid var(--accent)';
-      input.style.borderRadius = '4px';
-      
-      // Guardar el HTML original para restaurarlo si es necesario
-      const originalHTML = nameBtn.innerHTML;
-      
-      // Reemplazar el contenido con solo el input
-      nameBtn.innerHTML = '';
-      nameBtn.appendChild(input);
-      input.focus();
-      
-      // Ocultar completamente los botones de acción
-      const buttonsToDisable = listItem.querySelectorAll('.history-inline-btn');
-      buttonsToDisable.forEach(btn => {
-        btn.disabled = true;
-        btn.style.opacity = '0';
-        btn.style.visibility = 'hidden';
-        btn.style.position = 'absolute';
-        btn.style.pointerEvents = 'none';
-        btn.style.width = '0';
-        btn.style.height = '0';
-        btn.style.overflow = 'hidden';
-      });
-      
-      // Prevenir el cierre del panel al hacer clic en el input
-      input.addEventListener('click', (e) => {
-        e.stopPropagation();
-      });
-      
-      // Enfocar el input al inicio y seleccionar todo el texto
-      input.focus();
-      input.select();
-      
-      // Función para guardar los cambios
-      const saveEdit = (newName) => {
-        try {
-          const history = JSON.parse(localStorage.getItem('jsonHistory') || '[]');
-          if (item.idx >= 0 && item.idx < history.length) {
-            history[item.idx].name = newName;
-            localStorage.setItem('jsonHistory', JSON.stringify(history));
-            return true;
-          }
-        } catch (e) {
-          console.error('Error al guardar el historial:', e);
-        }
-        return false;
-      };
-
-      // Función para restaurar la vista normal
-      const restoreView = (newName) => {
-        // Crear el HTML original con el nuevo nombre si se proporcionó
-        const dateStr = item.date ? new Date(item.date).toLocaleString() : '';
-        const sizeStr = formatBytes(item.size);
-        
-        // Actualizar el nombre actual si se proporciona uno nuevo
-        if (newName !== undefined) {
-          currentName = newName || `JSON ${item.idx + 1}`;
-          
-          // Actualizar el nombre en el objeto del historial
-          const historyItem = state.history[item.idx];
-          if (historyItem) {
-            historyItem.name = currentName;
-            // Forzar la actualización del historial
-            if (typeof saveHistory === 'function') {
-              saveHistory();
-            } else {
-              try {
-                localStorage.setItem('jsonHistory', JSON.stringify(state.history));
-              } catch (e) {
-                console.error('Error al guardar en localStorage:', e);
-              }
-            }
-            
-            // Actualizar el ítem actual si es el seleccionado
-            if (state.selectedHistoryIndex === item.idx && el.jsonHistorySelected) {
-              el.jsonHistorySelected.textContent = currentName;
-            }
-          }
-        }
-        
-        // Limpiar el contenido actual pero mantener las referencias a los botones
-        nameBtn.innerHTML = '';
-        
-        // Restaurar el manejador de clic del botón principal
-        const handleNameClick = () => {
-          state.selectedHistoryIndex = item.idx;
-          if(el.jsonHistorySelected) el.jsonHistorySelected.textContent = currentName || `JSON ${item.idx + 1}`;
-          loadHistoryItem(item.idx);
-          closeHistoryDropdown();
-        };
-        
-        // Usar addEventListener en lugar de onclick para evitar sobrescribir otros manejadores
-        nameBtn.removeEventListener('click', handleNameClick); // Eliminar cualquier manejador previo
-        nameBtn.addEventListener('click', handleNameClick);
-        
-        // Crear el contenedor del nombre
-        const nameContainer = document.createElement('div');
-        nameContainer.className = 'history-preset-name';
-        
-        // Crear el texto del nombre
-        const nameText = document.createElement('div');
-        nameText.className = 'history-preset-name-text';
-        nameText.textContent = currentName;
-        
-        // Crear la información adicional (fecha y tamaño)
-        const infoText = document.createElement('div');
-        infoText.className = 'history-preset-info';
-        infoText.style.fontSize = '10px';
-        infoText.style.opacity = '0.8';
-        infoText.style.marginTop = '2px';
-        infoText.textContent = dateStr ? `(${dateStr} • ${sizeStr})` : `(${sizeStr})`;
-        
-        // Agregar elementos al contenedor del nombre
-        nameContainer.appendChild(nameText);
-        nameContainer.appendChild(infoText);
-        
-        // Restaurar botones de acción
-        const actions = document.createElement('div');
-        actions.className = 'history-inline-actions';
-        actions.style.position = 'absolute';
-        actions.style.right = '8px';
-        actions.style.top = '8px';
-        
-        // Crear botón de renombrar
-        const newRenameBtn = document.createElement('button');
-        newRenameBtn.type = 'button';
-        newRenameBtn.className = 'history-inline-btn history-inline-rename';
-        newRenameBtn.innerHTML = '<span aria-hidden="true">✏️</span>';
-        newRenameBtn.setAttribute('aria-label', t('rename'));
-        
-        // Aplicar estilos directamente al botón
-        newRenameBtn.style.width = '28px';
-        newRenameBtn.style.height = '28px';
-        newRenameBtn.style.display = 'inline-flex';
-        newRenameBtn.style.alignItems = 'center';
-        newRenameBtn.style.justifyContent = 'center';
-        newRenameBtn.style.borderRadius = '6px';
-        newRenameBtn.style.border = '1px solid var(--button-border)';
-        newRenameBtn.style.background = 'var(--button-bg)';
-        newRenameBtn.style.color = 'var(--fg)';
-        newRenameBtn.style.cursor = 'pointer';
-        newRenameBtn.style.transition = 'background 0.2s ease, transform 0.15s ease';
-        newRenameBtn.style.fontSize = '15px';
-        newRenameBtn.style.opacity = '1';
-        newRenameBtn.style.visibility = 'visible';
-        newRenameBtn.style.pointerEvents = 'auto';
-        
-        // Asignar el manejador de eventos original
-        const handleRenameClick = (e) => {
-          e.stopPropagation();
-          
-          // Obtener referencias a los elementos necesarios
-          const listItem = e.target.closest('.history-preset-item');
-          const nameBtn = listItem.querySelector('.history-preset-name');
-          const nameElement = nameBtn.querySelector('.history-preset-name-text');
-          
-          // Obtener el nombre actual del elemento (solo el nombre, sin fecha/tamaño)
-          // Usar el texto del elemento directamente para asegurar que tenemos el valor más reciente
-          let currentName = nameElement ? nameElement.textContent.trim() : (item.name || `JSON ${item.idx + 1}`);
-          
-          // Actualizar el nombre en el objeto del ítem para mantener la consistencia
-          if (item) {
-            item.name = currentName;
-          }
-          
-          // Crear input para edición
-          const input = document.createElement('input');
-          input.type = 'text';
-          input.value = currentName;
-          input.className = 'history-edit-input';
-          input.style.width = '100%';
-          input.style.padding = '4px';
-          input.style.border = '1px solid var(--accent)';
-          input.style.borderRadius = '4px';
-          // Seleccionar todo el texto para facilitar la edición
-          input.select();
-          
-          // Guardar el HTML original para restaurarlo si es necesario
-          const originalHTML = nameBtn.innerHTML;
-          
-          // Reemplazar el contenido con solo el input
-          nameBtn.innerHTML = '';
-          nameBtn.appendChild(input);
-          
-          // Enfocar y seleccionar el texto después de un pequeño retraso
-          // para asegurar que el elemento esté en el DOM
-          setTimeout(() => {
-            input.focus();
-            input.select();
-          }, 10);
-          
-          // Ocultar completamente los botones de acción
-          const buttonsToDisable = listItem.querySelectorAll('.history-inline-btn');
-          buttonsToDisable.forEach(btn => {
-            btn.disabled = true;
-            btn.style.opacity = '0';
-            btn.style.visibility = 'hidden';
-            btn.style.position = 'absolute';
-            btn.style.pointerEvents = 'none';
-            btn.style.width = '0';
-            btn.style.height = '0';
-            btn.style.overflow = 'hidden';
-          });
-          
-          // Prevenir el cierre del panel al hacer clic en el input
-          input.addEventListener('click', (e) => {
-            e.stopPropagation();
-          });
-          
-          // Guardar referencias a los botones originales
-          const originalRenameBtn = listItem.querySelector('.history-inline-rename');
-          const originalDeleteBtn = listItem.querySelector('.history-inline-delete');
-          
-          // Función para guardar los cambios
-          const saveEdit = (newName) => {
-            // Si el nombre está vacío, usar el predeterminado
-            const finalName = newName || `JSON ${item.idx + 1}`;
-            
-            // Si no hay cambios, no hacer nada
-            if (finalName === currentName) return true;
-            
-            try {
-              // Actualizar el nombre en el estado local
-              currentName = finalName;
-              
-              // Actualizar el nombre en el historial
-              const historyItem = state.history[item.idx];
-              if (historyItem) {
-                historyItem.name = finalName;
-                
-                // Forzar una actualización del estado global
-                state.history = [...state.history];
-                
-                // Guardar en localStorage
-                try {
-                  if (typeof saveHistory === 'function') {
-                    saveHistory();
-                  } else {
-                    localStorage.setItem('jsonHistory', JSON.stringify(state.history));
-                  }
-                  
-                  // Actualizar la interfaz para reflejar los cambios
-                  if (state.selectedHistoryIndex === item.idx && el.jsonHistorySelected) {
-                    el.jsonHistorySelected.textContent = finalName;
-                  }
-                  
-                  return true;
-                } catch (e) {
-                  console.error('Error al guardar el historial:', e);
-                  return false;
-                }
-              }
-            } catch (e) {
-              console.error('Error al guardar el nombre:', e);
-            }
-            return false;
-          };
-          
-          // Función para limpiar los event listeners
-          const cleanup = () => {
-            input.removeEventListener('keydown', handleKeyDown);
-            document.removeEventListener('mousedown', handleWindowClick);
-          };
-          
-          // Manejador de teclado
-          const handleKeyDown = (e) => {
-            if (e.key === 'Enter' || e.key === 'Escape') {
-              e.preventDefault();
-              handleEdit(e);
-            }
-          };
-          
-          // Manejador de clic fuera del input
-          const handleWindowClick = (e) => {
-            if (input && !input.contains(e.target) && 
-                !e.target.closest('.history-inline-rename') && 
-                !e.target.closest('.history-inline-delete')) {
-              // Guardar el valor actual antes de cerrar
-              const newName = input.value.trim();
-              if (newName && newName !== currentName) {
-                saveEdit(newName);
-              }
-              // Llamar a handleEdit con un objeto que tenga el tipo de evento
-              const fakeEvent = {
-                type: 'blur',
-                key: undefined,
-                preventDefault: () => {},
-                stopPropagation: () => {}
-              };
-              handleEdit(fakeEvent);
-            }
-          };
-          
-          // Función para restaurar el formato original del botón de nombre
-          const restoreNameButton = (newName) => {
-            // Crear el elemento de texto con el nuevo nombre
-            const nameText = document.createElement('span');
-            nameText.className = 'history-preset-name-text';
-            nameText.textContent = newName || `JSON ${item.idx + 1}`;
-            
-            // Limpiar el botón y restaurar su estructura original
-            nameBtn.innerHTML = '';
-            nameBtn.appendChild(nameText);
-            
-            // Restaurar el botón de renombrar
-            if (originalRenameBtn && originalRenameBtn.parentNode !== nameBtn) {
-              nameBtn.appendChild(originalRenameBtn);
-            }
-            
-            // Restaurar el botón de eliminar
-            if (originalDeleteBtn && originalDeleteBtn.parentNode !== nameBtn) {
-              nameBtn.appendChild(originalDeleteBtn);
-            }
-            
-            // Restaurar los estilos del botón de nombre
-            nameBtn.className = 'history-preset-name';
-            nameBtn.style.display = 'flex';
-            nameBtn.style.alignItems = 'center';
-            nameBtn.style.justifyContent = 'space-between';
-            nameBtn.style.width = '100%';
-            nameBtn.style.overflow = 'hidden';
-            nameBtn.style.textOverflow = 'ellipsis';
-            nameBtn.style.whiteSpace = 'nowrap';
-            
-            // Restaurar los estilos del texto
-            nameText.style.display = 'inline-block';
-            nameText.style.overflow = 'hidden';
-            nameText.style.textOverflow = 'ellipsis';
-            nameText.style.whiteSpace = 'nowrap';
-            nameText.style.maxWidth = 'calc(100% - 80px)';
-            nameText.style.verticalAlign = 'middle';
-            nameText.style.flex = '1';
-            
-            // Restaurar los botones de acción
-            const actionButtons = nameBtn.querySelectorAll('.history-inline-btn');
-            actionButtons.forEach(btn => {
-              btn.style.display = 'flex';
-              btn.style.alignItems = 'center';
-              btn.style.justifyContent = 'center';
-              btn.style.width = '24px';
-              btn.style.height = '24px';
-              btn.style.borderRadius = '4px';
-              btn.style.border = '1px solid var(--button-border)';
-              btn.style.background = 'var(--button-bg)';
-              btn.style.color = 'var(--fg)';
-              btn.style.cursor = 'pointer';
-              btn.style.transition = 'all 0.2s ease';
-              btn.style.opacity = '1';
-              btn.style.visibility = 'visible';
-              btn.style.pointerEvents = 'auto';
-              
-              // Asegurar que los botones tengan los manejadores correctos
-              if (btn.classList.contains('history-inline-rename')) {
-                btn.onclick = handleRenameClick;
-              } else if (btn.classList.contains('history-inline-delete')) {
-                btn.onclick = handleDeleteClick;
-              }
-            });
-            
-            return nameBtn;
-          };
-          
-          // Manejador de edición
-          const handleEdit = (e) => {
-            const isKeyEvent = e && (e.key === 'Enter' || e.key === 'Escape');
-            const isBlurEvent = e && e.type === 'blur';
-            
-            if (isKeyEvent || isBlurEvent) {
-              if (e.preventDefault) e.preventDefault();
-              if (e.stopPropagation) e.stopPropagation();
-              
-              let saved = false;
-              
-              // Si se presionó Enter o se perdió el foco, guardar cambios
-              if (isKeyEvent || isBlurEvent) {
-                const newName = input.value.trim();
-                
-                // Restaurar el formato del botón de nombre
-                restoreNameButton(newName);
-                
-                // Guardar siempre, incluso si no hay cambios visibles
-                saved = saveEdit(newName);
-                
-                // Si se presionó Escape, cancelar sin guardar
-                if (e.key === 'Escape') {
-                  saved = false;
-                }
-                // Si se presionó Enter sin cambios, considerar como guardado
-                else if (isKeyEvent && e.key === 'Enter' && newName === currentName) {
-                  saved = true;
-                }
-              }
-              
-              // Limpiar event listeners
-              cleanup();
-              
-              // Restaurar la vista normal
-              if (saved || (isKeyEvent && e.key === 'Enter' && e.key !== 'Escape')) {
-                // Actualizar el nombre en la interfaz
-                const displayName = currentName || `JSON ${item.idx + 1}`;
-                
-                // Reconstruir el HTML del botón con el nuevo nombre
-                const dateStr = item.date ? new Date(item.date).toLocaleString() : '';
-                const sizeStr = formatBytes(item.size);
-                
-                nameBtn.innerHTML = `
-                  <div class="history-preset-name">
-                    <div class="history-preset-name-text">${displayName}</div>
-                    <div class="history-preset-info" style="font-size: 10px; opacity: 0.8; margin-top: 2px;">
-                      ${dateStr ? `(${dateStr} • ${sizeStr})` : `(${sizeStr})`}
-                    </div>
-                  </div>
-                  <div class="history-inline-actions" style="position: absolute; right: 8px; top: 8px;">
-                    <button type="button" class="history-inline-btn history-inline-rename" style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; border: 1px solid var(--button-border); background: var(--button-bg); color: var(--fg); cursor: pointer; transition: background 0.2s ease, transform 0.15s ease; font-size: 15px; opacity: 1; visibility: visible; pointer-events: auto;">
-                      <span aria-hidden="true">✏️</span>
-                    </button>
-                    <button type="button" class="history-inline-btn history-inline-delete" style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; border: 1px solid var(--button-border); background: var(--button-bg); color: var(--fg); cursor: pointer; transition: background 0.2s ease, transform 0.15s ease; font-size: 15px; margin-left: 4px; opacity: 1; visibility: visible; pointer-events: auto;">
-                      <span aria-hidden="true">🗑️</span>
-                    </button>
-                  </div>
-                `;
-                
-                // Restaurar los manejadores de eventos de los botones
-                const newRenameBtn = nameBtn.querySelector('.history-inline-rename');
-                const newDeleteBtn = nameBtn.querySelector('.history-inline-delete');
-                
-                if (newRenameBtn) {
-                  newRenameBtn.onclick = handleRenameClick;
-                  
-                  // Restaurar estilos hover
-                  newRenameBtn.addEventListener('mouseover', () => {
-                    newRenameBtn.style.background = 'rgba(76, 175, 80, 0.2)';
-                    newRenameBtn.style.borderColor = 'rgba(76, 175, 80, 0.4)';
-                    newRenameBtn.style.transform = 'translateY(-1px)';
-                  });
-                  
-                  newRenameBtn.addEventListener('mouseout', () => {
-                    newRenameBtn.style.background = 'var(--button-bg)';
-                    newRenameBtn.style.borderColor = 'var(--button-border)';
-                    newRenameBtn.style.transform = 'none';
-                  });
-                }
-                
-                if (newDeleteBtn) {
-                  newDeleteBtn.onclick = handleDeleteClick;
-                  
-                  // Restaurar estilos hover
-                  newDeleteBtn.addEventListener('mouseover', () => {
-                    newDeleteBtn.style.background = 'rgba(244, 67, 54, 0.2)';
-                    newDeleteBtn.style.borderColor = 'rgba(244, 67, 54, 0.4)';
-                    newDeleteBtn.style.transform = 'translateY(-1px)';
-                  });
-                  
-                  newDeleteBtn.addEventListener('mouseout', () => {
-                    newDeleteBtn.style.background = 'var(--button-bg)';
-                    newDeleteBtn.style.borderColor = 'var(--button-border)';
-                    newDeleteBtn.style.transform = 'none';
-                  });
-                }
-                
-                // Actualizar el texto seleccionado en el dropdown si es el elemento actual
-                if (state.selectedHistoryIndex === item.idx && el.jsonHistorySelected) {
-                  el.jsonHistorySelected.textContent = displayName;
-                }
-              } else if (e.key === 'Escape') {
-                // Si se presionó Escape, restaurar la vista original
-                nameBtn.innerHTML = originalHTML;
-                
-                // Restaurar los manejadores de eventos de los botones
-                const newRenameBtn = listItem.querySelector('.history-inline-rename');
-                const newDeleteBtn = listItem.querySelector('.history-inline-delete');
-                
-                if (newRenameBtn) {
-                  newRenameBtn.onclick = handleRenameClick;
-                }
-                
-                if (newDeleteBtn && originalDeleteBtn) {
-                  newDeleteBtn.onclick = originalDeleteBtn.onclick;
-                }
-              }
-            }
-          };
-          
-          // Agregar event listeners
-          input.addEventListener('keydown', handleKeyDown);
-          
-          // Usar un timeout para evitar que el clic que abrió la edición la cierre inmediatamente
-          setTimeout(() => {
-            document.addEventListener('mousedown', handleWindowClick);
-          }, 0);
-        };
-        
-        newRenameBtn.onclick = handleRenameClick;
-        
-        // Crear botón de eliminar
-        const newDeleteBtn = document.createElement('button');
-        newDeleteBtn.type = 'button';
-        newDeleteBtn.className = 'history-inline-btn history-inline-delete';
-        newDeleteBtn.innerHTML = '<span aria-hidden="true">🗑️</span>';
-        newDeleteBtn.setAttribute('aria-label', t('delete'));
-        
-        // Aplicar estilos directamente al botón
-        newDeleteBtn.style.width = '28px';
-        newDeleteBtn.style.height = '28px';
-        newDeleteBtn.style.display = 'inline-flex';
-        newDeleteBtn.style.alignItems = 'center';
-        newDeleteBtn.style.justifyContent = 'center';
-        newDeleteBtn.style.borderRadius = '6px';
-        newDeleteBtn.style.border = '1px solid var(--button-border)';
-        newDeleteBtn.style.background = 'var(--button-bg)';
-        newDeleteBtn.style.color = 'var(--fg)';
-        newDeleteBtn.style.cursor = 'pointer';
-        newDeleteBtn.style.transition = 'background 0.2s ease, transform 0.15s ease';
-        newDeleteBtn.style.fontSize = '15px';
-        newDeleteBtn.style.marginLeft = '4px';
-        newDeleteBtn.style.opacity = '1';
-        newDeleteBtn.style.visibility = 'visible';
-        newDeleteBtn.style.pointerEvents = 'auto';
-        
-        // Asignar el manejador de eventos original del botón de eliminar
-        const handleDeleteClick = (e) => {
-          e.stopPropagation();
-          
-          // Si ya está en modo confirmación, no hacer nada
-          const listItem = e.target.closest('.history-preset-item');
-          if (listItem.classList.contains('confirm-delete')) return;
-          
-          // Poner el elemento en modo confirmación
-          listItem.classList.add('confirm-delete');
-          listItem.style.backgroundColor = 'rgba(255, 200, 200, 0.3)';
-          listItem.style.borderLeft = '3px solid #ff4444';
-          listItem.style.boxShadow = '0 0 8px rgba(255, 0, 0, 0.2)';
-          listItem.style.transition = 'all 0.3s ease';
-          
-          // Agregar borde al elemento del historial seleccionado
-          if (listItem) {
-            listItem.style.border = '1px solid rgb(255, 68, 68)';
-            listItem.style.borderRadius = '4px';
-            listItem.style.transition = 'all 0.3s ease';
-          }
-          
-          // Ocultar los botones actuales
-          const actions = listItem.querySelector('.history-inline-actions');
-          actions.style.display = 'none';
-          
-          // Crear contenedor de confirmación
-          const confirmContainer = document.createElement('div');
-          confirmContainer.className = 'delete-confirm-container';
-          
-          // Obtener posición del botón de eliminar y su contenedor
-          const deleteBtn = listItem.querySelector('.history-inline-delete');
-          const deleteBtnRect = deleteBtn.getBoundingClientRect();
-          const listItemRect = listItem.getBoundingClientRect();
-          
-          // Estilos base del contenedor de confirmación
-          Object.assign(confirmContainer.style, {
-            display: 'flex',
-            position: 'absolute',
-            backgroundColor: 'rgba(255, 240, 240, 0.98)',
-            border: '3px solid #ff4444',
-            borderRadius: '6px',
-            padding: '10px 14px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-            zIndex: '9999',
-            alignItems: 'center',
-            gap: '10px',
-            maxWidth: '280px',
-            minWidth: '200px',
-            boxSizing: 'border-box',
-            whiteSpace: 'nowrap',
-            top: `${deleteBtnRect.top - listItemRect.top}px`,
-            left: `${deleteBtnRect.right - listItemRect.left + 10}px`,
-            transform: 'translateY(-50%)'
-          });
-          
-          // Añadir el contenedor al DOM para poder calcular sus dimensiones
-          document.body.appendChild(confirmContainer);
-          
-          // Función para actualizar la posición del contenedor
-          const updateConfirmPosition = () => {
-            const containerRect = confirmContainer.getBoundingClientRect();
-            const viewportWidth = window.innerWidth;
-            const viewportHeight = window.innerHeight;
-            const listItemRect = listItem.getBoundingClientRect();
-            const buttonRect = deleteBtn.getBoundingClientRect();
-            
-            // Calcular posición relativa al ítem de la lista
-            let posTop = buttonRect.top - listItemRect.top + (buttonRect.height / 2);
-            let posLeft = buttonRect.right - listItemRect.left + 10;
-            
-            // Ajustar si se sale por la derecha del contenedor
-            if (posLeft + containerRect.width > listItemRect.width) {
-              posLeft = buttonRect.left - listItemRect.left - containerRect.width - 10;
-              // Si aún así se sale por la izquierda, forzar posición dentro del contenedor
-              if (posLeft < 0) {
-                posLeft = 10;
-                confirmContainer.style.maxWidth = `${listItemRect.width - 20}px`;
-              }
-            }
-            
-            // Ajustar posición vertical para mantener dentro del ítem
-            if (posTop - (containerRect.height / 2) < 0) {
-              posTop = containerRect.height / 2;
-            } else if (posTop + (containerRect.height / 2) > listItemRect.height) {
-              posTop = listItemRect.height - (containerRect.height / 2);
-            }
-            
-            // Aplicar posición con ajuste de ventana
-            const confirmRect = confirmContainer.getBoundingClientRect();
-            const windowWidth = window.innerWidth;
-            const windowHeight = window.innerHeight;
-            
-            // Ajustar posición horizontal si se sale de la ventana
-            if (posLeft + confirmRect.width > windowWidth - 10) {
-              posLeft = windowWidth - confirmRect.width - 10;
-            }
-            
-            // Ajustar posición vertical si se sale de la ventana
-            if (posTop + confirmRect.height > windowHeight - 10) {
-              posTop = windowHeight - confirmRect.height - 10;
-            } else if (posTop < 10) {
-              posTop = 10;
-            }
-            
-            confirmContainer.style.top = `${Math.max(10, posTop)}px`;
-            confirmContainer.style.left = `${Math.max(10, posLeft)}px`;
-            confirmContainer.style.position = 'fixed';
-            confirmContainer.style.transform = 'none';
-          };
-          
-          // Actualizar posición inicial
-          updateConfirmPosition();
-          
-          // Manejador para actualizar posición al cambiar el tamaño o hacer scroll
-          const handleUpdatePosition = () => updateConfirmPosition();
-          
-          // Agregar event listeners
-          window.addEventListener('resize', handleUpdatePosition);
-          window.addEventListener('scroll', handleUpdatePosition, true);
-          
-          // Limpiar los event listeners cuando se cancele o confirme
-          const cleanupResizeListener = () => {
-            window.removeEventListener('resize', handleUpdatePosition);
-            window.removeEventListener('scroll', handleUpdatePosition, true);
-          };
-          
-          // Crear botón de confirmación
-          const confirmBtn = document.createElement('button');
-          confirmBtn.textContent = t('confirmDelete');
-          confirmBtn.className = 'confirm-delete-btn';
-          confirmBtn.style.padding = '4px 12px';
-          confirmBtn.style.border = '1px solid #ff4444';
-          confirmBtn.style.borderRadius = '4px';
-          confirmBtn.style.backgroundColor = '#ff4444';
-          confirmBtn.style.color = 'white';
-          confirmBtn.style.cursor = 'pointer';
-          confirmBtn.style.transition = 'all 0.2s';
-          
-          // Crear botón de cancelar
-          const cancelBtn = document.createElement('button');
-          cancelBtn.textContent = t('cancel');
-          cancelBtn.className = 'cancel-delete-btn';
-          cancelBtn.style.padding = '4px 12px';
-          cancelBtn.style.border = '1px solid #ccc';
-          cancelBtn.style.borderRadius = '4px';
-          cancelBtn.style.backgroundColor = '#f0f0f0';
-          cancelBtn.style.color = '#333';
-          cancelBtn.style.cursor = 'pointer';
-          cancelBtn.style.transition = 'all 0.2s';
-          
-          // Agregar botones al contenedor
-          confirmContainer.appendChild(confirmBtn);
-          confirmContainer.appendChild(cancelBtn);
-          
-          // Agregar el contenedor al documento
-          document.body.appendChild(confirmContainer);
-          
-          // Posicionar el contenedor de confirmación
-          const updatePosition = () => {
-            const rect = listItem.getBoundingClientRect();
-            const containerRect = confirmContainer.getBoundingClientRect();
-            
-            // Asegurarse de que el contenedor no se salga de la pantalla
-            let left = rect.left - containerRect.width - 20;
-            if (left < 10) left = 10; // Márgen mínimo
-            
-            confirmContainer.style.left = `${left}px`;
-            confirmContainer.style.top = `${rect.top + (rect.height / 2) - (containerRect.height / 2)}px`;
-          };
-          
-          // Actualizar posición inicial
-          updatePosition();
-          
-          // Actualizar posición al cambiar el tamaño de la ventana
-          const handleResize = () => updatePosition();
-          window.addEventListener('resize', handleResize);
-          
-          // Manejador de clic fuera del contenedor de confirmación
-          const handleClickOutside = (e) => {
-            if (!confirmContainer.contains(e.target) && !listItem.contains(e.target)) {
-              // Si se hace clic fuera del contenedor y fuera del ítem, cancelar
-              cancelBtn.click();
-            }
-          };
-          
-          // Agregar manejador de clic fuera
-          setTimeout(() => {
-            document.addEventListener('click', handleClickOutside);
-          }, 0);
-          
-          // Manejador de clic en confirmar
-          const handleConfirm = (e) => {
-            e.stopPropagation();
-            // Eliminar el ítem del historial
-            state.history.splice(item.idx, 1);
-            saveHistory();
-            renderHistoryDropdown();
-            if (el.jsonHistorySelected) el.jsonHistorySelected.textContent = t('selectJsonOption');
-            
-            // Limpiar listeners y restaurar vista
-            cleanupResizeListener();
-            cleanup();
-            
-            // Forzar actualización de la interfaz
-            if (confirmContainer.parentNode) {
-              confirmContainer.remove();
-            }
-          };
-          
-          // Manejador de clic en cancelar
-          const handleCancel = (e) => {
-            e.stopPropagation();
-            cleanupResizeListener();
-            cleanup();
-            
-            // Asegurarse de que el contenedor se elimine
-            if (confirmContainer.parentNode) {
-              confirmContainer.remove();
-            }
-          };
-          
-          // Función para limpiar
-          const cleanup = () => {
-            // Restaurar estilos del ítem
-            listItem.classList.remove('confirm-delete');
-            listItem.style.backgroundColor = '';
-            listItem.style.borderLeft = '';
-            listItem.style.boxShadow = '';
-            listItem.style.border = '';
-            
-            // Mostrar botones nuevamente
-            if (actions) {
-              actions.style.display = '';
-            }
-            
-            // Limpiar listeners
-            if (typeof document !== 'undefined') {
-              document.removeEventListener('click', handleClickOutside);
-            }
-            
-            // Eliminar botones de confirmación si existen
-            if (confirmBtn) {
-              confirmBtn.removeEventListener('click', handleConfirm);
-            }
-            if (cancelBtn) {
-              cancelBtn.removeEventListener('click', handleCancel);
-            }
-          };
-          
-          // Agregar manejadores de eventos
-          confirmBtn.addEventListener('click', handleConfirm);
-          cancelBtn.addEventListener('click', handleCancel);
-        };
-        
-        newDeleteBtn.onclick = handleDeleteClick;
-        
-        // Agregar estilos hover
-        newRenameBtn.addEventListener('mouseover', () => {
-          newRenameBtn.style.background = 'rgba(76, 175, 80, 0.2)';
-          newRenameBtn.style.borderColor = 'rgba(76, 175, 80, 0.4)';
-          newRenameBtn.style.transform = 'translateY(-1px)';
-        });
-        
-        newRenameBtn.addEventListener('mouseout', () => {
-          newRenameBtn.style.background = 'var(--button-bg)';
-          newRenameBtn.style.borderColor = 'var(--button-border)';
-          newRenameBtn.style.transform = 'none';
-        });
-        
-        newDeleteBtn.addEventListener('mouseover', () => {
-          newDeleteBtn.style.background = 'rgba(244, 67, 54, 0.2)';
-          newDeleteBtn.style.borderColor = 'rgba(244, 67, 54, 0.4)';
-          newDeleteBtn.style.transform = 'translateY(-1px)';
-        });
-        
-        newDeleteBtn.addEventListener('mouseout', () => {
-          newDeleteBtn.style.background = 'var(--button-bg)';
-          newDeleteBtn.style.borderColor = 'var(--button-border)';
-          newDeleteBtn.style.transform = 'none';
-        });
-        
-        // Agregar botones al contenedor de acciones
-        actions.appendChild(newRenameBtn);
-        actions.appendChild(newDeleteBtn);
-        
-        // Agregar todo al botón principal
-        nameBtn.appendChild(nameContainer);
-        nameBtn.appendChild(actions);
-        
-        // Forzar un reflow para asegurar que los estilos se apliquen
-        void nameBtn.offsetHeight;
-      };
-
-      // Manejar la edición
-      const handleEdit = (e) => {
-        // Solo procesar si es Enter, Escape o blur
-        const isKeyEvent = e && (e.key === 'Enter' || e.key === 'Escape');
-        const isBlurEvent = e && e.type === 'blur';
-        
-        if (isKeyEvent || isBlurEvent) {
-          if (e.preventDefault) e.preventDefault();
-          if (e.stopPropagation) e.stopPropagation();
-          
-          let saved = false;
-          
-          // Si se presionó Enter o se perdió el foco, guardar cambios
-          if (isKeyEvent || isBlurEvent) {
-            const newName = input.value.trim();
-            if (newName && newName !== currentName) {
-              saved = saveEdit(newName);
-              if (saved) {
-                currentName = newName;
-              }
-            }
-          }
-          
-          // Limpiar event listeners
-          input.removeEventListener('keydown', handleKeyDown);
-          cleanup(); // Limpiar el event listener de mousedown
-          
-          // Si se presionó Escape, restaurar la vista original sin guardar
-          if (e.key === 'Escape') {
-            nameBtn.innerHTML = originalHTML;
-            
-            // Reasignar eventos y restaurar estilos de botones
-            const buttonsToUpdate = nameBtn.querySelectorAll('.history-inline-btn');
-            buttonsToUpdate.forEach(btn => {
-              btn.disabled = false;
-              btn.style.opacity = '';
-              btn.style.visibility = '';
-              btn.style.position = '';
-              btn.style.pointerEvents = '';
-              btn.style.width = '';
-              btn.style.height = '';
-              btn.style.overflow = '';
-              
-              // Reasignar eventos
-              if (btn.classList.contains('history-inline-rename')) {
-                btn.onclick = (e) => {
-                  e.stopPropagation();
-                  renameBtn.click();
-                };
-              } else if (btn.classList.contains('history-inline-delete')) {
-                btn.onclick = (e) => {
-                  e.stopPropagation();
-                  deleteBtn.click();
-                };
-              }
-            });
-            
-            // Restaurar el manejador de clic del botón principal
-            nameBtn.onclick = () => {
-              state.selectedHistoryIndex = item.idx;
-              if(el.jsonHistorySelected) el.jsonHistorySelected.textContent = currentName || `JSON ${item.idx + 1}`;
-              loadHistoryItem(item.idx);
-              closeHistoryDropdown();
-            };
-            
-            return;
-          }
-          
-          // Si no fue Escape, restaurar la vista normal
-          restoreView(saved ? input.value.trim() : null);
-        }
-      };
-      
-      const handleKeyDown = (e) => {
-        if (e.key === 'Enter' || e.key === 'Escape') {
-          e.preventDefault();
-          handleEdit(e);
-        }
-      };
-      
-            // Usar mousedown en lugar de blur para tener más control sobre cuándo se cierra
-      const handleWindowClick = (e) => {
-        // Si el clic fue fuera del input y no en los botones
-        if (input && !input.contains(e.target) && 
-            !e.target.closest('.history-inline-rename') && 
-            !e.target.closest('.history-inline-delete')) {
-          // Guardar el valor actual antes de cerrar
-          const newName = input.value.trim();
-          if (newName && newName !== currentName) {
-            saveEdit(newName);
-          }
-          // Llamar a handleEdit con un objeto que tenga el tipo de evento
-          const fakeEvent = {
-            type: 'blur',
-            key: undefined,
-            preventDefault: () => {},
-            stopPropagation: () => {}
-          };
-          handleEdit(fakeEvent);
-        }
-      };
-      
-      // Usar un timeout para evitar que el clic que abrió la edición la cierre inmediatamente
-      setTimeout(() => {
-        document.addEventListener('mousedown', handleWindowClick);
-      }, 0);
-      
-      // Manejar teclado
-      input.addEventListener('keydown', handleKeyDown);
-      
-      // Limpiar el event listener cuando se termine la edición
-      const cleanup = () => {
-        document.removeEventListener('mousedown', handleWindowClick);
-      };
+    renameBtn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      startInlineRenameHistory(item.idx, entry);
     });
 
     const deleteBtn = document.createElement('button');
@@ -4420,216 +3481,9 @@ function renderHistoryDropdown(){
     deleteBtn.className = 'history-inline-btn history-inline-delete';
     deleteBtn.innerHTML = '<span aria-hidden="true">🗑️</span>';
     deleteBtn.setAttribute('aria-label', t('delete'));
-    deleteBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      
-      // Si ya está en modo confirmación, no hacer nada
-      if (entry.classList.contains('confirm-delete')) return;
-      
-      // Poner el elemento en modo confirmación
-      entry.classList.add('confirm-delete');
-      entry.style.backgroundColor = 'rgba(255, 200, 200, 0.3)';
-      entry.style.borderLeft = '3px solid #ff4444';
-      entry.style.boxShadow = '0 0 8px rgba(255, 0, 0, 0.2)';
-      entry.style.transition = 'all 0.3s ease';
-      
-      // Agregar borde al elemento del historial seleccionado
-      if (entry) {
-        entry.style.border = '1px solid rgb(255, 68, 68)';
-        entry.style.borderRadius = '4px';
-        entry.style.transition = 'all 0.3s ease';
-      }
-      
-      // Ocultar los botones actuales
-      actions.style.display = 'none';
-      
-      // Crear contenedor de confirmación centrado
-      const confirmContainer = document.createElement('div');
-      confirmContainer.className = 'delete-confirm-container';
-      
-      // Obtener dimensiones del elemento padre
-      const rect = entry.getBoundingClientRect();
-      const actionsRect = actions.getBoundingClientRect();
-      
-      // Estilos para el contenedor de confirmación
-      Object.assign(confirmContainer.style, {
-        display: 'flex',
-        position: 'fixed',
-        transform: 'none',
-        maxWidth: '280px',
-        minWidth: '200px',
-        boxSizing: 'border-box',
-        backgroundColor: 'rgba(255, 240, 240, 0.98)',
-        border: '3px solid rgb(255, 0, 0)',
-        borderRadius: '6px',
-        padding: '8px 12px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-        zIndex: '9999',
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '8px',
-        textAlign: 'center',
-        minWidth: 'auto',
-        maxWidth: 'none',
-        whiteSpace: 'nowrap',
-        backdropFilter: 'blur(2px)'
-      });
-      
-      // Mensaje de confirmación
-      const confirmText = document.createElement('span');
-      confirmText.textContent = t('deleteConfirm') || '¿Eliminar?';
-      confirmText.style.marginRight = '6px';
-      confirmText.style.fontWeight = '500';
-      confirmText.style.color = '#d32f2f';
-      
-      // Botón de confirmar
-      const confirmBtn = document.createElement('button');
-      confirmBtn.textContent = t('confirm') || 'Sí';
-      confirmBtn.style.padding = '2px 8px';
-      confirmBtn.style.fontSize = '11px';
-      confirmBtn.style.fontWeight = 'bold';
-      confirmBtn.style.backgroundColor = '#ff4444';
-      confirmBtn.style.color = 'white';
-      confirmBtn.style.border = 'none';
-      confirmBtn.style.borderRadius = '3px';
-      confirmBtn.style.cursor = 'pointer';
-      confirmBtn.style.boxShadow = '0 1px 2px rgba(0,0,0,0.1)';
-      confirmBtn.style.transition = 'all 0.15s';
-      confirmBtn.style.minWidth = '30px';
-      confirmBtn.onmouseenter = () => {
-        confirmBtn.style.backgroundColor = '#ff2222';
-        confirmBtn.style.transform = 'translateY(-1px)';
-      };
-      confirmBtn.onmouseleave = () => {
-        confirmBtn.style.backgroundColor = '#ff4444';
-        confirmBtn.style.transform = 'translateY(0)';
-      };
-      
-      // Botón de cancelar
-      const cancelBtn = document.createElement('button');
-      cancelBtn.textContent = t('cancel') || 'No';
-      cancelBtn.style.padding = '2px 8px';
-      cancelBtn.style.fontSize = '11px';
-      cancelBtn.style.fontWeight = '500';
-      cancelBtn.style.backgroundColor = '#f5f5f5';
-      cancelBtn.style.color = '#555';
-      cancelBtn.style.border = '1px solid #ddd';
-      cancelBtn.style.borderRadius = '3px';
-      cancelBtn.style.cursor = 'pointer';
-      cancelBtn.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
-      cancelBtn.style.transition = 'all 0.15s';
-      cancelBtn.style.minWidth = '30px';
-      cancelBtn.onmouseenter = () => {
-        cancelBtn.style.backgroundColor = '#e0e0e0';
-        cancelBtn.style.transform = 'translateY(-1px)';
-      };
-      cancelBtn.onmouseleave = () => {
-        cancelBtn.style.backgroundColor = '#f0f0f0';
-        cancelBtn.style.transform = 'translateY(0)';
-      };
-      
-      // Agregar manejadores de eventos
-      confirmBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        deleteHistoryItem(item.idx, true); // Pasar true para omitir la segunda confirmación
-      });
-      
-      cancelBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        entry.classList.remove('confirm-delete');
-        entry.style.backgroundColor = '';
-        entry.style.borderLeft = '';
-        entry.style.boxShadow = '';
-        if (confirmContainer && confirmContainer.parentNode) {
-          confirmContainer.remove();
-        }
-        actions.style.display = 'flex';
-      });
-      
-      // Agregar elementos al contenedor
-      confirmContainer.appendChild(confirmText);
-      confirmContainer.appendChild(confirmBtn);
-      confirmContainer.appendChild(cancelBtn);
-      
-      // Insertar el panel de confirmación justo antes de los botones de acción
-      actions.parentNode.insertBefore(confirmContainer, actions);
-      
-      // Asegurar que el contenedor de acciones tenga posición relativa
-      actions.style.position = 'relative';
-      actions.style.paddingRight = '200px'; // Espacio para el panel de confirmación
-      
-      // Función para limpiar los estilos
-      const cleanupStyles = () => {
-        entry.classList.remove('confirm-delete');
-        entry.style.removeProperty('background-color');
-        entry.style.removeProperty('border-left');
-        entry.style.removeProperty('box-shadow');
-        entry.style.removeProperty('transition');
-        actions.style.removeProperty('position');
-        actions.style.removeProperty('padding-right');
-        actions.style.removeProperty('display');
-        
-        // Restaurar estilos del elemento del historial
-        if (entry) {
-          entry.style.removeProperty('border');
-          entry.style.removeProperty('border-radius');
-          entry.style.removeProperty('transition');
-        }
-        
-        if (confirmContainer && confirmContainer.parentNode) {
-          confirmContainer.remove();
-        }
-      };
-
-      // Cancelar la confirmación al hacer clic fuera
-      const cancelOnClickOutside = (e) => {
-        if (entry && !entry.contains(e.target)) {
-          cleanupStyles();
-          if (actions) {
-            actions.style.display = 'flex';
-          }
-          document.removeEventListener('click', cancelOnClickOutside);
-        }
-      };
-
-      // Manejar el clic en el botón de cancelar
-      cancelBtn.onclick = (e) => {
-        e.stopPropagation();
-        cleanupStyles();
-        actions.style.display = 'flex';
-        document.removeEventListener('click', cancelOnClickOutside);
-      };
-      
-      // Mostrar con animación
-      setTimeout(() => {
-        confirmContainer.style.opacity = '1';
-        confirmContainer.style.transform = 'scale(1)';
-      }, 10);
-      
-      // Asegurar que los botones originales se restablezcan si el elemento se elimina de otra manera
-      const originalDisplay = window.getComputedStyle(actions).display;
-      const resetButtons = () => {
-        if (confirmContainer && confirmContainer.parentNode) {
-          confirmContainer.remove();
-        }
-        actions.style.display = originalDisplay;
-        document.removeEventListener('click', cancelOnClickOutside);
-      };
-      
-      // Limpiar si el elemento se elimina del DOM
-      const observer = new MutationObserver((mutations) => {
-        if (!document.body.contains(entry)) {
-          resetButtons();
-          observer.disconnect();
-        }
-      });
-      observer.observe(document.body, { childList: true, subtree: true });
-      
-      // Usar setTimeout para evitar que el clic actual active el evento del documento
-      setTimeout(() => {
-        document.addEventListener('click', cancelOnClickOutside);
-      }, 0);
+    deleteBtn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      startInlineDeleteHistory(item.idx, entry);
     });
 
     actions.appendChild(renameBtn);
@@ -4673,27 +3527,101 @@ function loadHistoryItem(index){
   announce('jsonLoaded');
 }
 
-function renameHistoryItem(index){
+function startInlineRenameHistory(index, entryEl) {
+  // Cierra cualquier otro editor/confirm abierto antes de abrir uno nuevo
+  document.querySelectorAll('.history-inline-editor, .history-inline-confirm, .preset-inline-editor, .preset-inline-confirm').forEach(el => {
+    const parent = el.parentElement;
+    if (parent && (parent !== entryEl)) {
+      // Re-renderiza el contenedor padre para restaurar el item
+      if (parent.closest('.history-preset-item')) renderHistoryDropdown();
+      if (parent.closest('.theme-preset-item')) renderThemePresetDropdown();
+    }
+  });
+
   const item = state.history[index];
-  if(!item) return alert(t('selectJsonFromHistory'));
-  const newName = prompt(t('newName'), item.name || '');
-  if(newName){
-    item.name = newName;
+  if(!item) return;
+  entryEl.innerHTML = '';
+  const wrapper = document.createElement('div');
+  wrapper.className = 'history-inline-editor';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = item.name || (`JSON ${index+1}`);
+  input.setAttribute('aria-label', t('newName'));
+  const saveBtn = document.createElement('button');
+  saveBtn.type = 'button';
+  saveBtn.textContent = t('save');
+  const cancelBtn = document.createElement('button');
+  cancelBtn.type = 'button';
+  cancelBtn.textContent = t('cancel');
+  wrapper.appendChild(input);
+  wrapper.appendChild(saveBtn);
+  wrapper.appendChild(cancelBtn);
+  entryEl.appendChild(wrapper);
+  input.focus();
+  input.select();
+
+  function doSave() {
+    const newName = (input.value || '').trim();
+    if(!newName){
+      input.focus();
+      input.classList.add('error');
+      setTimeout(()=>input.classList.remove('error'),800);
+      return;
+    }
+    state.history[index].name = newName;
     saveHistory();
     renderHistoryDropdown();
   }
+  function doCancel() { renderHistoryDropdown(); }
+
+  saveBtn.addEventListener('click', doSave);
+  cancelBtn.addEventListener('click', doCancel);
+  input.addEventListener('keydown', (ev)=>{
+    if(ev.key === 'Enter') { ev.preventDefault(); doSave(); }
+    else if(ev.key === 'Escape') { ev.preventDefault(); doCancel(); }
+  });
 }
 
-function deleteHistoryItem(index, skipConfirmation = false){
+function startInlineDeleteHistory(index, entryEl) {
+  // Cierra cualquier otro editor/confirm abierto antes de abrir uno nuevo
+  document.querySelectorAll('.history-inline-editor, .history-inline-confirm, .preset-inline-editor, .preset-inline-confirm').forEach(el => {
+    const parent = el.parentElement;
+    if (parent && (parent !== entryEl)) {
+      // Re-renderiza el contenedor padre para restaurar el item
+      if (parent.closest('.history-preset-item')) renderHistoryDropdown();
+      if (parent.closest('.theme-preset-item')) renderThemePresetDropdown();
+    }
+  });
+
   const item = state.history[index];
-  if(!item) return alert(t('selectItemToDelete'));
-  
-  // Si se debe omitir la confirmación (ya se mostró la interfaz personalizada)
-  if (!skipConfirmation && !confirm(t('deleteFromHistory'))) return;
-  state.history.splice(index, 1);
-  saveHistory();
-  renderHistoryDropdown();
-  if(el.jsonHistorySelected) el.jsonHistorySelected.textContent = t('selectJsonOption');
+  if(!item) return;
+  entryEl.innerHTML = '';
+  const container = document.createElement('div');
+  container.className = 'history-inline-confirm';
+  const p = document.createElement('p');
+  p.textContent = `${item.name || `JSON ${index+1}`} — ${t('confirmDeleteHistory')}`;
+  const confirmBtn = document.createElement('button');
+  confirmBtn.type = 'button';
+  confirmBtn.className = 'btn-confirm';
+  confirmBtn.textContent = t('confirm');
+  const cancelBtn = document.createElement('button');
+  cancelBtn.type = 'button';
+  cancelBtn.className = 'btn-cancel';
+  cancelBtn.textContent = t('cancel');
+  container.appendChild(p);
+  container.appendChild(confirmBtn);
+  container.appendChild(cancelBtn);
+  entryEl.appendChild(container);
+
+  confirmBtn.addEventListener('click', ()=> {
+    state.history.splice(index, 1);
+    saveHistory();
+    renderHistoryDropdown();
+    if(el.jsonHistorySelected) el.jsonHistorySelected.textContent = t('selectJsonOption');
+  });
+  cancelBtn.addEventListener('click', ()=> {
+    renderHistoryDropdown();
+  });
 }
 
 function formatBytes(bytes){
@@ -4981,6 +3909,108 @@ function saveThemePresets(list){
   renderThemePresetDropdown();
 }
 
+function startInlineRenameTheme(id, itemEl) {
+  // Cierra cualquier otro editor/confirm abierto antes de abrir uno nuevo
+  document.querySelectorAll('.history-inline-editor, .history-inline-confirm, .preset-inline-editor, .preset-inline-confirm').forEach(el => {
+    const parent = el.parentElement;
+    if (parent && (parent !== itemEl)) {
+      // Re-renderiza el contenedor padre para restaurar el item
+      if (parent.closest('.history-preset-item')) renderHistoryDropdown();
+      if (parent.closest('.theme-preset-item')) renderThemePresetDropdown();
+    }
+  });
+
+  const presetIdx = state.themePresets.findIndex(p => p.id === id);
+  if(presetIdx === -1) return;
+  const preset = state.themePresets[presetIdx];
+  itemEl.innerHTML = '';
+  const container = document.createElement('div');
+  container.className = 'preset-inline-editor';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = preset.name || '';
+  input.setAttribute('aria-label', t('newName'));
+  const saveBtn = document.createElement('button');
+  saveBtn.type = 'button';
+  saveBtn.textContent = t('save');
+  const cancelBtn = document.createElement('button');
+  cancelBtn.type = 'button';
+  cancelBtn.textContent = t('cancel');
+  container.appendChild(input);
+  container.appendChild(saveBtn);
+  container.appendChild(cancelBtn);
+  itemEl.appendChild(container);
+  input.focus();
+  input.select();
+
+  function doSave() {
+    const newName = (input.value || '').trim();
+    if(!newName){
+      input.focus();
+      input.classList.add('error');
+      setTimeout(()=>input.classList.remove('error'),800);
+      return;
+    }
+    if(state.themePresets.some((p, i) => i !== presetIdx && (p.name||'').toLowerCase() === newName.toLowerCase())){
+      input.classList.add('error');
+      setTimeout(()=>input.classList.remove('error'),900);
+      return;
+    }
+    state.themePresets[presetIdx].name = newName;
+    saveThemePresets(state.themePresets);
+  }
+  function doCancel() { renderThemePresetDropdown(); }
+
+  saveBtn.addEventListener('click', doSave);
+  cancelBtn.addEventListener('click', doCancel);
+  input.addEventListener('keydown', (ev)=>{
+    if(ev.key === 'Enter') { ev.preventDefault(); doSave(); }
+    else if(ev.key === 'Escape') { ev.preventDefault(); doCancel(); }
+  });
+}
+
+function startInlineDeleteTheme(id, itemEl) {
+  // Cierra cualquier otro editor/confirm abierto antes de abrir uno nuevo
+  document.querySelectorAll('.history-inline-editor, .history-inline-confirm, .preset-inline-editor, .preset-inline-confirm').forEach(el => {
+    const parent = el.parentElement;
+    if (parent && (parent !== itemEl)) {
+      // Re-renderiza el contenedor padre para restaurar el item
+      if (parent.closest('.history-preset-item')) renderHistoryDropdown();
+      if (parent.closest('.theme-preset-item')) renderThemePresetDropdown();
+    }
+  });
+
+  const presetIdx = state.themePresets.findIndex(p => p.id === id);
+  if(presetIdx === -1) return;
+  const preset = state.themePresets[presetIdx];
+  itemEl.innerHTML = '';
+  const container = document.createElement('div');
+  container.className = 'preset-inline-confirm';
+  const p = document.createElement('p');
+  p.textContent = `${preset.name || ''} — ${t('confirmDeleteTheme')}`;
+  const confirmBtn = document.createElement('button');
+  confirmBtn.type = 'button';
+  confirmBtn.className = 'btn-confirm';
+  confirmBtn.textContent = t('confirm');
+  const cancelBtn = document.createElement('button');
+  cancelBtn.type = 'button';
+  cancelBtn.className = 'btn-cancel';
+  cancelBtn.textContent = t('cancel');
+  container.appendChild(p);
+  container.appendChild(confirmBtn);
+  container.appendChild(cancelBtn);
+  itemEl.appendChild(container);
+
+  confirmBtn.addEventListener('click', ()=> {
+    state.themePresets.splice(presetIdx, 1);
+    saveThemePresets(state.themePresets);
+    renderThemePresetDropdown();
+  });
+  cancelBtn.addEventListener('click', ()=> {
+    renderThemePresetDropdown();
+  });
+}
+
 function renderThemePresetDropdown(){
   if(!el.themePresetList) return;
   const list = el.themePresetList;
@@ -5030,11 +4060,10 @@ function renderThemePresetDropdown(){
     renameBtn.className = 'preset-inline-btn preset-inline-rename';
     renameBtn.setAttribute('aria-label', t('renameThemePresetLabel'));
     renameBtn.innerHTML = '<span aria-hidden="true">✏️</span>';
-    renameBtn.addEventListener('click', () => {
+    renameBtn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
       state.selectedThemePreset = preset.id;
-      const newName = prompt(t('renameThemePrompt'), preset.name);
-      if(newName === null) return;
-      renameThemePresetById(preset.id, newName);
+      startInlineRenameTheme(preset.id, item);
     });
 
     const deleteBtn = document.createElement('button');
@@ -5042,15 +4071,14 @@ function renderThemePresetDropdown(){
     deleteBtn.className = 'preset-inline-btn preset-inline-delete';
     deleteBtn.setAttribute('aria-label', t('deleteThemePresetLabel'));
     deleteBtn.innerHTML = '<span aria-hidden="true">🗑️</span>';
-    deleteBtn.addEventListener('click', () => {
+    deleteBtn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
       state.selectedThemePreset = preset.id;
-      if(!confirm(t('confirmDeleteTheme'))) return;
-      deleteThemePresetById(preset.id);
+      startInlineDeleteTheme(preset.id, item);
     });
 
     actions.appendChild(renameBtn);
     actions.appendChild(deleteBtn);
-
     item.appendChild(nameBtn);
     item.appendChild(actions);
     list.appendChild(item);
@@ -5341,9 +4369,7 @@ function toggleDrawer(open){
     document.body.classList.add('drawer-open');
     if(el.drawerOverlay){
       el.drawerOverlay.classList.add('visible');
-      el.drawerOverlay.setAttribute('aria-hidden', 'false');
-      // Asegurarse de que el overlay no sea enfocable
-      el.drawerOverlay.removeAttribute('tabindex');
+      el.drawerOverlay.setAttribute('aria-hidden','false');
     }
     showConfigTab();
     const focusTarget = el.languageSelect || el.bgColor;
@@ -5355,9 +4381,7 @@ function toggleDrawer(open){
     document.body.classList.remove('drawer-open');
     if(el.drawerOverlay){
       el.drawerOverlay.classList.remove('visible');
-      el.drawerOverlay.setAttribute('aria-hidden', 'true');
-      // Hacer que el overlay no sea enfocable cuando está oculto
-      el.drawerOverlay.removeAttribute('tabindex');
+      el.drawerOverlay.setAttribute('aria-hidden','true');
     }
     showConfigTab();
     if(drawerLastFocus && typeof drawerLastFocus.focus === 'function'){
@@ -5370,7 +4394,7 @@ function updateEditBadgeCounter(){
   const badge = document.getElementById('editModeBadge');
   const counter = document.getElementById('editModeCount');
   if(!badge || !counter) return;
-  const count = editedCellSet.size;
+  const count = state.editedCells ? state.editedCells.size : 0;
   counter.textContent = String(count);
   badge.setAttribute('data-count', String(count));
 }
@@ -5431,7 +4455,11 @@ function getSortAriaLabel(columnKey){
 }
 
 function resetEditTracking() {
-  editedCellSet.clear();
+  if (state.editedCells) {
+    state.editedCells.clear();
+  } else {
+    state.editedCells = new Set();
+  }
   updateEditBadgeCounter();
 }
 
@@ -6528,3 +5556,16 @@ function showCopyMessage(x, y) {
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<!-- Service Worker para PWA -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('sw.js').then(function(registration) {
+      console.log('ServiceWorker registrado con éxito: ', registration.scope);
+    }).catch(function(error) {
+      console.warn('Error al registrar el ServiceWorker: ', error);
+    });
+  });
+}
+</script>
