@@ -273,50 +273,72 @@ if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
 
 // --- Tema oscuro automático y preferencia manual ---
 (function() {
-  // Detecta preferencia del sistema con media query
-  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const savedTheme = localStorage.getItem('theme');
-  
-  // Primera carga: si no hay preferencia guardada, aplica la del sistema
-  if (!savedTheme) {
-    if (prefersDark) document.body.classList.add('dark');
-    else document.body.classList.remove('dark');
-    // Nota: no guardamos aún, solo lo aplicamos visualmente
-  } else {
-    // Si hay preferencia guardada, respétala
-    if (savedTheme === 'dark') document.body.classList.add('dark');
-    else document.body.classList.remove('dark');
+  // Función para aplicar el tema
+  function applyTheme(theme) {
+    if (!document.body) return;
+    
+    if (theme === 'dark') {
+      document.body.classList.add('dark');
+    } else {
+      document.body.classList.remove('dark');
+    }
   }
-  
-  // Observa cambios en el sistema SOLO si no hay preferencia manual
-  if (!savedTheme && window.matchMedia) {
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
-      if (!localStorage.getItem('theme')) {
-        if (e.matches) document.body.classList.add('dark');
-        else document.body.classList.remove('dark');
-      }
-    });
+
+  // Función para inicializar el tema
+  function initTheme() {
+    // Detecta preferencia del sistema con media query
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const savedTheme = localStorage.getItem('theme');
+    
+    // Primera carga: si no hay preferencia guardada, aplica la del sistema
+    if (!savedTheme) {
+      applyTheme(prefersDark ? 'dark' : 'light');
+    } else {
+      // Si hay preferencia guardada, respétala
+      applyTheme(savedTheme);
+    }
+    
+    // Observa cambios en el sistema SOLO si no hay preferencia manual
+    if (!savedTheme && window.matchMedia) {
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+        if (!localStorage.getItem('theme')) {
+          applyTheme(e.matches ? 'dark' : 'light');
+        }
+      });
+    }
   }
   
   // Cuando el usuario pulsa el botón de tema claro/oscuro, guarda preferencia
-  document.addEventListener('DOMContentLoaded', function() {
+  function setupThemeButtons() {
     var themeLight = document.getElementById('themeLight');
     var themeDark = document.getElementById('themeDark');
     
     if (themeLight) {
       themeLight.addEventListener('click', () => {
         localStorage.setItem('theme', 'light');
-        document.body.classList.remove('dark');
+        applyTheme('light');
       });
     }
     
     if (themeDark) {
       themeDark.addEventListener('click', () => {
         localStorage.setItem('theme', 'dark');
-        document.body.classList.add('dark');
+        applyTheme('dark');
       });
     }
-  });
+  }
+  
+  // Inicializar el tema cuando el DOM esté listo
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+      initTheme();
+      setupThemeButtons();
+    });
+  } else {
+    // DOM ya está listo
+      initTheme();
+      setupThemeButtons();
+  }
 })();
 </script>
 
@@ -325,6 +347,42 @@ if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
  * Sistema de Internacionalización (i18n)
  * Versión 1.0.0
  */
+
+// Estado global de la aplicación
+window.state = window.state || {
+  currentLanguage: 'es',
+  selectedLanguage: null,
+  editing: false,
+  filterDebounceMs: 300,
+  columnFilters: {},
+  virtualStart: 0,
+  rowHeight: 40,
+  historyFilter: '',
+  originalParsed: null,
+  originalRows: [],
+  currentRows: [],
+  currentHeaders: [],
+  sortState: {},
+  lastParsedFull: null
+};
+
+// Objeto i18n global
+window.i18n = window.i18n || {
+  t: function(key, params = {}) {
+    // Si no hay traducciones cargadas, devolver la clave
+    if (!window.translations) return key;
+    
+    const lang = window.state?.currentLanguage || 'es';
+    let text = window.translations[lang]?.[key] || window.translations['es']?.[key] || key;
+    
+    // Reemplazar parámetros
+    Object.entries(params).forEach(([k, v]) => {
+      text = text.replace(new RegExp(`\\{\\${k}\\}`, 'g'), v);
+    });
+    
+    return text;
+  }
+};
 
 const i18n = (() => {
   // Idiomas soportados
@@ -365,17 +423,40 @@ const i18n = (() => {
    * @param {Object} params - Parámetros para reemplazar en la cadena
    * @returns {string} Texto traducido
    */
-  function t(key, params = {}) {
-    let text = translations[currentLanguage]?.[key] || 
-               translations['en'][key] || 
-               key;
+  function t(key, params = {}, defaultValue = '') {
+    // Obtener el texto traducido con manejo seguro de errores
+    let text;
     
-    // Reemplazar parámetros
-    Object.keys(params).forEach(param => {
-      text = text.replace(new RegExp(`{{${param}}}`, 'g'), params[param]);
-    });
-    
-    return text;
+    try {
+      // Intentar obtener la traducción del idioma actual
+      if (translations[currentLanguage]?.[key]) {
+        text = translations[currentLanguage][key];
+      } 
+      // Si no está en el idioma actual, intentar con inglés
+      else if (translations['en']?.[key]) {
+        text = translations['en'][key];
+      }
+      // Si no hay traducción, usar el valor por defecto o la clave
+      else {
+        text = defaultValue !== '' ? defaultValue : key;
+      }
+      
+      // Asegurarse de que text sea un string
+      text = String(text);
+      
+      // Reemplazar parámetros solo si hay parámetros y text no está vacío
+      if (Object.keys(params).length > 0 && text) {
+        Object.entries(params).forEach(([param, value]) => {
+          const regex = new RegExp(`\\{\\s*${param}\\s*\\}`, 'g');
+          text = text.replace(regex, value);
+        });
+      }
+      
+      return text;
+    } catch (error) {
+      console.warn(`Error al traducir la clave '${key}':`, error);
+      return defaultValue !== '' ? defaultValue : key;
+    }
   }
 
   /**
@@ -1016,6 +1097,105 @@ mark.highlight {
 }
 .show-with-data{
   display:flex;
+}
+
+/* Estilos para el grupo de botones de tema */
+.theme-toggle-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  background: var(--input-bg);
+  margin-bottom: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.theme-toggle-group .preset-dropdown-title {
+  font-size: 14px;
+  color: var(--muted);
+  font-weight: 500;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  width: 100%;
+  text-align: left;
+}
+
+.theme-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.theme-button {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--button-border);
+  background: var(--button-bg);
+  color: var(--fg);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+.theme-button:hover {
+  background: var(--button-hover-bg);
+  border-color: var(--accent);
+}
+
+.theme-button:active {
+  transform: translateY(1px);
+}
+
+/* Estilos para el selector de tipografía */
+.font-selector {
+  font-size: 14px !important; /* Tamaño fijo para el selector */
+  padding: 6px 8px;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  background: var(--input-bg);
+  color: var(--fg);
+  cursor: pointer;
+}
+
+/* Asegurar que las opciones del selector mantengan el tamaño fijo */
+.font-selector option {
+  font-size: 14px !important;
+  padding: 4px 8px;
+}
+
+body.dark .theme-button {
+  background: var(--button-bg);
+  color: var(--fg);
+}
+
+body.dark .theme-button:hover {
+  background: var(--button-hover-bg);
+  border-color: var(--accent);
+}
+
+/* Asegurar que el contenedor de botones de tema se alinee con el selector de idioma */
+#configContent > .theme-toggle-group:first-child {
+  margin-top: 0;
+}
+
+/* Ajustes para pantallas medianas y grandes */
+@media (min-width: 481px) {
+  .theme-buttons {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+  
+  .theme-button {
+    flex: 1;
+    justify-content: center;
+  }
 }
 @media (max-width:720px){
   #drawer{width:100vw}
@@ -1841,16 +2021,23 @@ html {
 
   <div id="configContent" class="active">
 
-    <div style="display:flex;gap:8px;margin-bottom:10px;">
-      <button id="themeLight" aria-label="Cambiar a modo claro" title="Modo claro" data-i18n-title="lightMode" data-i18n-aria-label="lightMode">☀️</button>
-      <button id="themeDark" aria-label="Cambiar a modo oscuro" title="Modo oscuro" data-i18n-title="darkMode" data-i18n-aria-label="darkMode">🌙</button>
+    <div class="theme-toggle-group">
+      <span class="preset-dropdown-title" data-i18n="theme">Tema</span>
+      <div class="theme-buttons">
+        <button id="themeLight" class="theme-button" aria-label="Cambiar a modo claro" title="Modo claro" data-i18n-title="lightMode" data-i18n-aria-label="lightMode">
+          <span data-i18n="lightMode">Modo claro</span> ☀️
+        </button>
+        <button id="themeDark" class="theme-button" aria-label="Cambiar a modo oscuro" title="Modo oscuro" data-i18n-title="darkMode" data-i18n-aria-label="darkMode">
+          <span data-i18n="darkMode">Modo oscuro</span> 🌙
+        </button>
+      </div>
     </div>
 
     <div class="preset-dropdown" aria-label="Lenguaje" data-i18n-aria-label="language">
       <span id="languageLabel" class="preset-dropdown-title" data-i18n="language">Idioma</span>
       <div class="preset-dropdown-trigger">
         <button id="languageToggle" class="preset-dropdown-toggle" type="button" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="languageSelected">
-          <span id="languageSelected" class="preset-dropdown-selected" data-i18n="selectLanguageOption">-- Seleccionar idioma --</span>
+          <span id="languageSelected" class="preset-dropdown-selected"></span>
           <span class="preset-dropdown-caret" aria-hidden="true">▾</span>
         </button>
         <div id="languageDropdown" class="preset-dropdown-menu" role="listbox" hidden>
@@ -2092,7 +2279,8 @@ const translations = {
     'lightMode': 'Modo claro',
     'darkMode': 'Modo oscuro',
     'languageEnglishDefault': 'Inglés (predeterminado)',
-    'languageSpanish': 'Español'
+    'languageSpanish': 'Español',
+    'theme': 'Tema'
   },
   en: {
     // Main interface
@@ -2175,6 +2363,7 @@ const translations = {
     'darkMode': 'Dark mode',
     'languageEnglishDefault': 'English (default)',
     'languageSpanish': 'Spanish',
+    'theme': 'Theme',
     'languageFrench': 'French',
     'languageGerman': 'German',
     'languagePortuguese': 'Portuguese'
@@ -2260,7 +2449,8 @@ const translations = {
     'openConfiguration': 'Ouvrir la configuration',
     'closeConfiguration': 'Fermer la configuration',
     'lightMode': 'Mode clair',
-    'darkMode': 'Mode sombre'
+    'darkMode': 'Mode sombre',
+    'theme': 'Thème'
   },
   de: {
     // Hauptoberfläche
@@ -2343,7 +2533,8 @@ const translations = {
     'openConfiguration': 'Einstellungen öffnen',
     'closeConfiguration': 'Einstellungen schließen',
     'lightMode': 'Heller Modus',
-    'darkMode': 'Dunkler Modus'
+    'darkMode': 'Dunkler Modus',
+    'theme': 'Design'
   },
   pt: {
     // Interface principal
@@ -2426,7 +2617,8 @@ const translations = {
     'openConfiguration': 'Abrir configurações',
     'closeConfiguration': 'Fechar configurações',
     'lightMode': 'Modo claro',
-    'darkMode': 'Modo escuro'
+    'darkMode': 'Modo escuro',
+    'theme': 'Tema'
   }
 };
 
@@ -2490,17 +2682,36 @@ const i18nConfig = {
   // Función para cambiar de idioma
   changeLanguage: function(lang) {
     if (this.supportedLanguages.includes(lang)) {
-      i18n.setLanguage(lang);
+      // Actualizar el estado
+      state.currentLanguage = lang;
+      document.documentElement.lang = lang;
       
       // Actualizar la interfaz
       updateUITexts();
+      renderLanguageDropdown();
       
       // Guardar preferencia
       localStorage.setItem('preferredLanguage', lang);
       
+      // Actualizar los botones de tema
+      updateThemeButtonsText();
+      
       return true;
     }
     return false;
+  },
+  
+  // Función para obtener traducción
+  t: function(key, params = {}) {
+    const lang = this.currentLanguage || this.defaultLanguage;
+    let text = translations[lang]?.[key] || translations[this.defaultLanguage]?.[key] || key;
+    
+    // Reemplazar parámetros
+    Object.entries(params).forEach(([k, v]) => {
+      text = text.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), v);
+    });
+    
+    return text;
   },
   
   // Inicializar internacionalización
@@ -2510,12 +2721,26 @@ const i18nConfig = {
     const browserLang = (navigator.language || 'en').split('-')[0];
     const langToUse = savedLang || (this.supportedLanguages.includes(browserLang) ? browserLang : this.defaultLanguage);
     
-    this.changeLanguage(langToUse);
+    // Asegurarse de que el estado existe
+    state.currentLanguage = langToUse;
+    
+    // Configurar el idioma en el documento
+    document.documentElement.lang = langToUse;
+    
+    // Configurar el manejador de eventos para los botones de tema
+    // Se comenta esta línea ya que ahora se llama desde initializeApp
+    // setupThemeButtons();
+    
+    // Actualizar la interfaz
+    updateUITexts();
+    renderLanguageDropdown();
     
     // Escuchar cambios en las preferencias de idioma del sistema
     window.addEventListener('languagechange', () => {
+      if (localStorage.getItem('preferredLanguage')) return; // Respetar preferencia del usuario
+      
       const newLang = (navigator.language || 'en').split('-')[0];
-      if (this.supportedLanguages.includes(newLang) && !localStorage.getItem('preferredLanguage')) {
+      if (this.supportedLanguages.includes(newLang)) {
         this.changeLanguage(newLang);
       }
     });
@@ -3197,7 +3422,10 @@ function updateUITexts(){
     // 3. Actualizar opciones del selector de idioma
     const languageOptions = {
         'languageEnglishDefault': 'languageOptionEn',
-        'languageSpanish': 'languageOptionEs'
+        'languageSpanish': 'languageOptionEs',
+        'languageFrench': 'languageOptionFr',
+        'languageGerman': 'languageOptionDe',
+        'languagePortuguese': 'languageOptionPt'
     };
     
     Object.entries(languageOptions).forEach(([key, id]) => {
@@ -3226,28 +3454,110 @@ if(el.historySearchInput){
 }
 
 function getLanguageLabel(code){
+  // Si i18n no está disponible, usar valores por defecto
+  if (typeof window.i18n?.t !== 'function') {
+    const defaultLabels = {
+      en: 'English',
+      es: 'Español',
+      fr: 'Français',
+      de: 'Deutsch',
+      pt: 'Português'
+    };
+    return defaultLabels[code] || code;
+  }
+  
   const map = {
-    en: t('languageEnglishDefault') || 'English (default)',
-    es: t('languageSpanish') || 'Español'
+    en: window.i18n.t('languageEnglishDefault', {}, 'English'),
+    es: window.i18n.t('languageSpanish', {}, 'Español'),
+    fr: window.i18n.t('languageFrench', {}, 'Français'),
+    de: window.i18n.t('languageGerman', {}, 'Deutsch'),
+    pt: window.i18n.t('languagePortuguese', {}, 'Português')
   };
   return map[code] || code;
 }
 
 function updateLanguageSelectedLabel(code){
   if(!el.languageSelected) return;
-  const label = getLanguageLabel(code);
-  el.languageSelected.textContent = label;
+  
+  // Mapa de códigos de idioma a sus nombres nativos
+  const languageNames = {
+    'en': 'English',
+    'es': 'Español',
+    'fr': 'Français',
+    'de': 'Deutsch',
+    'pt': 'Português'
+  };
+  
+  // Mostrar directamente el nombre del idioma del mapa
+  // sin pasar por el sistema de traducción para evitar mostrar claves
+  el.languageSelected.textContent = languageNames[code] || code.toUpperCase();
+  
+  // Actualizar atributos de accesibilidad usando el sistema de traducción
+  if (window.i18n?.t) {
+    const translationKey = {
+      'en': 'languageEnglishDefault',
+      'es': 'languageSpanish',
+      'fr': 'languageFrench',
+      'de': 'languageGerman',
+      'pt': 'languagePortuguese'
+    }[code];
+    
+    // Solo usamos la traducción para los atributos, no para el texto visible
+    if (translationKey) {
+      el.languageSelected.setAttribute('aria-label', window.i18n.t(translationKey));
+      el.languageSelected.setAttribute('title', window.i18n.t(translationKey));
+    }
+  }
 }
 
 function renderLanguageDropdown(){
   if(!el.languageList) return;
 
-  const languages = [
-    { code: 'en', label: t('languageEnglishDefault') || 'English (default)' },
-    { code: 'es', label: t('languageSpanish') || 'Español' }
-  ];
+  // Mapeo de códigos de idioma a claves de traducción
+  const translationKeys = {
+    'en': 'languageEnglishDefault',
+    'es': 'languageSpanish',
+    'fr': 'languageFrench',
+    'de': 'languageGerman',
+    'pt': 'languagePortuguese'
+  };
+
+  // Si i18n no está disponible, usar valores por defecto
+  const getLabel = (code, defaultLabel) => {
+    if (typeof window.i18n?.t === 'function') {
+      const key = translationKeys[code] || `language${code.toUpperCase()}`;
+      return window.i18n.t(key, {}, defaultLabel);
+    }
+    return defaultLabel;
+  };
+
+  // Crear la lista de idiomas soportados
+  const languages = Object.entries(translationKeys).map(([code, key]) => {
+    const defaultLabels = {
+      'en': 'English',
+      'es': 'Español',
+      'fr': 'Français',
+      'de': 'Deutsch',
+      'pt': 'Português'
+    };
+    return {
+      code,
+      label: getLabel(code, defaultLabels[code] || code.toUpperCase())
+    };
+  }).filter(lang => lang.label && lang.label !== ''); // Filtrar idiomas sin etiqueta
 
   el.languageList.innerHTML = '';
+
+  // Ordenar alfabéticamente por etiqueta
+  languages.sort((a, b) => a.label.localeCompare(b.label));
+
+  // Mover el idioma actual al principio
+  const currentLang = state.selectedLanguage || state.currentLanguage || 'es';
+  const currentIndex = languages.findIndex(lang => lang.code === currentLang);
+  if (currentIndex > 0) {
+    const [currentLangItem] = languages.splice(currentIndex, 1);
+    languages.unshift(currentLangItem);
+  }
 
   languages.forEach(lang => {
     const item = document.createElement('button');
@@ -3258,9 +3568,11 @@ function renderLanguageDropdown(){
     const isSelected = (state.selectedLanguage || state.currentLanguage) === lang.code;
     if(isSelected){
       item.setAttribute('aria-selected', 'true');
+      item.classList.add('selected');
     }
 
-    item.addEventListener('click', ()=>{
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
       closeLanguageDropdown();
       changeLanguage(lang.code);
     });
@@ -3268,6 +3580,22 @@ function renderLanguageDropdown(){
     const label = document.createElement('span');
     label.className = 'language-preset-name';
     label.textContent = lang.label;
+    
+    // Añadir bandera o emoji del idioma
+    const flagMap = {
+      'en': '🇺🇸',  // Cambiado de GB a US para inglés
+      'es': '🇪🇸',
+      'fr': '🇫🇷',
+      'de': '🇩🇪',
+      'pt': '🇵🇹'
+    };
+    
+    const flag = document.createElement('span');
+    flag.className = 'language-flag';
+    flag.textContent = flagMap[lang.code] || '🌐';
+    flag.setAttribute('aria-hidden', 'true');
+    
+    item.prepend(flag);
     item.appendChild(label);
 
     el.languageList.appendChild(item);
@@ -3300,53 +3628,103 @@ function changeLanguage(lang) {
   console.log('Iniciando cambio de idioma a:', lang);
   
   // Validar que el idioma sea soportado
-  if (!['es', 'en'].includes(lang)) {
+  const supportedLangs = ['es', 'en', 'fr', 'de', 'pt'];
+  if (!supportedLangs.includes(lang)) {
     console.warn(`Idioma no soportado: ${lang}. Usando español por defecto.`);
     lang = 'es';
   }
   
-  // 1. Actualizar el estado y almacenamiento
-  state.currentLanguage = lang;
-  localStorage.setItem('preferredLanguage', lang);
-  state.selectedLanguage = lang;
-  
-  // 2. Actualizar el selector de idioma
-  if (el.languageSelect) {
-    console.log('Actualizando selector de idioma a:', lang);
-    el.languageSelect.value = lang;
-  }
+  try {
+    // 1. Actualizar el estado y almacenamiento
+    state.currentLanguage = lang;
+    localStorage.setItem('preferredLanguage', lang);
+    state.selectedLanguage = lang;
+    
+    // 2. Actualizar el selector de idioma
+    if (el.languageSelect) {
+      el.languageSelect.value = lang;
+    }
 
-  updateLanguageSelectedLabel(lang);
-  
-  // 3. Actualizar la dirección del documento para idiomas RTL si es necesario
-  document.documentElement.lang = lang;
-  document.documentElement.dir = lang === 'ar' || lang === 'he' ? 'rtl' : 'ltr';
-  
-  // 4. Actualizar todos los textos de la interfaz
-  console.log('Actualizando textos de la interfaz...');
-  updateUITexts();
-  
-  // 5. Actualizar elementos específicos que podrían necesitar atención especial
-  console.log('Actualizando elementos dinámicos...');
-  
-  // Actualizar el título de la página
-  document.title = t('appTitle');
-  
-  // 6. Forzar actualización de la tabla para asegurar que todos los textos se actualicen
-  console.log('Volviendo a renderizar la tabla...');
-  if (state.currentRows && state.currentRows.length > 0) {
-    renderTable();
+    // 3. Actualizar la etiqueta del idioma seleccionado de forma segura
+    try {
+      updateLanguageSelectedLabel(lang);
+    } catch (e) {
+      console.warn('Error actualizando etiqueta de idioma:', e);
+      if (el.languageSelected) {
+        el.languageSelected.textContent = lang.toUpperCase();
+      }
+    }
+    
+    // 4. Actualizar la dirección del documento para idiomas RTL si es necesario
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === 'ar' || lang === 'he' ? 'rtl' : 'ltr';
+    
+    // 5. Actualizar todos los textos de la interfaz
+    if (typeof updateUITexts === 'function') {
+      try {
+        updateUITexts();
+      } catch (e) {
+        console.error('Error en updateUITexts:', e);
+      }
+    }
+    
+    // 6. Actualizar el título de la página de forma segura
+    try {
+      document.title = t('appTitle') || 'JSON Viewer';
+    } catch (e) {
+      console.warn('Error actualizando título:', e);
+      document.title = 'JSON Viewer';
+    }
+    
+    // 7. Forzar actualización de la tabla si es necesario
+    if (state.currentRows?.length > 0 && typeof renderTable === 'function') {
+      try {
+        renderTable();
+      } catch (e) {
+        console.error('Error renderizando tabla:', e);
+      }
+    }
+    
+    // 8. Actualizar botón de edición si existe
+    if (el.editBtnText) {
+      try {
+        el.editBtnText.textContent = state.editing ? (t('save') || 'Guardar') : (t('edit') || 'Editar');
+      } catch (e) {
+        console.warn('Error actualizando texto del botón de edición:', e);
+        el.editBtnText.textContent = state.editing ? 'Guardar' : 'Editar';
+      }
+    }
+    
+    console.log('Cambio de idioma completado a:', lang);
+    
+    // 9. Actualizar elementos con data-i18n si la función existe
+    if (typeof applyDataTranslations === 'function') {
+      try {
+        applyDataTranslations();
+      } catch (e) {
+        console.warn('Error aplicando traducciones a elementos data-i18n:', e);
+      }
+    }
+    
+    // 10. Actualizar botones de tema
+    if (typeof updateThemeButtonsText === 'function') {
+      try {
+        updateThemeButtonsText();
+      } catch (e) {
+        console.warn('Error actualizando botones de tema:', e);
+      }
+    }
+    
+  } catch (error) {
+    console.error('Error crítico al cambiar el idioma:', error);
+    // Intentar restaurar un estado consistente
+    state.currentLanguage = 'es';
+    document.documentElement.lang = 'es';
+    document.documentElement.dir = 'ltr';
+    if (el.languageSelected) {
+      el.languageSelected.textContent = 'ES';
+    }
   }
-  
-  // 7. Actualizar cualquier otro estado que dependa del idioma
-  if (el.editBtnText) {
-    el.editBtnText.textContent = state.editing ? t('save') : t('edit');
-  }
-  
-  console.log('Cambio de idioma completado a:', lang);
-  
-  // 8. Actualizar elementos con data-i18n
-  applyDataTranslations();
 }
 
 function saveColumnFilters(){
@@ -5556,6 +5934,97 @@ function showCopyMessage(x, y) {
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<script>
+// Función para actualizar los textos de los botones de tema
+function updateThemeButtonsText() {
+  const lightBtn = document.querySelector('#themeLight span[data-i18n="lightMode"]');
+  const darkBtn = document.querySelector('#themeDark span[data-i18n="darkMode"]');
+  
+  if (lightBtn) {
+    lightBtn.textContent = t('lightMode');
+  }
+  
+  if (darkBtn) {
+    darkBtn.textContent = t('darkMode');
+  }
+  
+  // Actualizar títulos y etiquetas ARIA
+  const lightBtnContainer = document.getElementById('themeLight');
+  const darkBtnContainer = document.getElementById('themeDark');
+  
+  if (lightBtnContainer) {
+    lightBtnContainer.setAttribute('title', t('lightMode'));
+    lightBtnContainer.setAttribute('aria-label', t('lightMode'));
+  }
+  
+  if (darkBtnContainer) {
+    darkBtnContainer.setAttribute('title', t('darkMode'));
+    darkBtnContainer.setAttribute('aria-label', t('darkMode'));
+  }
+}
+
+// Función para configurar los botones de tema
+function setupThemeButtons() {
+  const themeLight = document.getElementById('themeLight');
+  const themeDark = document.getElementById('themeDark');
+  
+  if (themeLight) {
+    themeLight.addEventListener('click', () => {
+      localStorage.setItem('theme', 'light');
+      document.body.classList.remove('dark');
+      updateThemeButtonsText();
+      announce('lightModeActivated');
+    });
+  }
+  
+  if (themeDark) {
+    themeDark.addEventListener('click', () => {
+      localStorage.setItem('theme', 'dark');
+      document.body.classList.add('dark');
+      updateThemeButtonsText();
+      announce('darkModeActivated');
+    });
+  }
+  
+  updateThemeButtonsText();
+}
+
+// Inicialización de i18n y tema al cargar el documento
+document.addEventListener('DOMContentLoaded', () => {
+  // Configurar tema inicial
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const savedTheme = localStorage.getItem('theme');
+  
+  if (savedTheme) {
+    document.body.classList.toggle('dark', savedTheme === 'dark');
+  } else if (prefersDark) {
+    document.body.classList.add('dark');
+  }
+  
+  // Inicializar i18n
+  if (typeof i18nConfig !== 'undefined') {
+    i18nConfig.init();
+  } else if (window.i18n?.t) {
+    // Si i18nConfig no está definido pero window.i18n sí, forzar actualización de la UI
+    updateThemeButtonsText();
+    if (typeof renderLanguageDropdown === 'function') {
+      renderLanguageDropdown();
+    }
+  }
+  
+  // Configurar botones de tema
+  setupThemeButtons();
+  
+  // Forzar una actualización de la interfaz después de un breve retraso
+  setTimeout(() => {
+    updateThemeButtonsText();
+    if (typeof renderLanguageDropdown === 'function') {
+      renderLanguageDropdown();
+    }
+  }, 100);
+});
+</script>
 
 <!-- Service Worker para PWA -->
 <script>
